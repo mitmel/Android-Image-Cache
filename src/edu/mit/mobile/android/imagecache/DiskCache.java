@@ -165,6 +165,13 @@ public abstract class DiskCache<K, V> {
 		return success;
 	}
 
+	/**
+	 * @return the size of the cache as it is on disk.
+	 */
+	public int getCacheSize(){
+		return mCacheBase.listFiles(mCacheFileFilter).length;
+	}
+
 	private final CacheFileFilter mCacheFileFilter = new CacheFileFilter();
 
 	private class CacheFileFilter implements FileFilter {
@@ -183,7 +190,7 @@ public abstract class DiskCache<K, V> {
 	 * @param in
 	 * @param out
 	 */
-	public abstract void toDisk(K key, V in, OutputStream out);
+	protected abstract void toDisk(K key, V in, OutputStream out);
 
 	/**
 	 * Implement this to do the actual disk reading.
@@ -191,7 +198,7 @@ public abstract class DiskCache<K, V> {
 	 * @param in
 	 * @return a new instance of {@link V} containing the contents of in.
 	 */
-	public abstract V fromDisk(K key, InputStream in);
+	protected abstract V fromDisk(K key, InputStream in);
 
 	/**
 	 * Using the key's {@link Object#toString() toString()} method, generates a string suitable for using as a filename.

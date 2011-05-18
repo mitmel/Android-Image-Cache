@@ -64,12 +64,54 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 	private long mIDCounter = 0;
 
+	private static ImageCache mInstance;
+
+	private final HttpClient hc;
+
+	private final CompressFormat mCompressFormat;
+	private final int mQuality;
+
+	// TODO make it so this is customizable on the instance level.
+	public static ImageCache getInstance(Context context){
+		if (mInstance == null){
+			mInstance = new ImageCache(context, CompressFormat.JPEG, 85);
+		}
+		return mInstance;
+	}
+
+	private ImageCache(Context context, CompressFormat format, int quality) {
+		super(context.getCacheDir(), null, getExtension(format));
+		hc = getHttpClient();
+
+		mCompressFormat = format;
+		mQuality = quality;
+	}
+
+	private static String getExtension(CompressFormat format){
+		String extension;
+		switch(format){
+		case JPEG:
+			extension = ".jpg";
+			break;
+
+		case PNG:
+			extension = ".png";
+			break;
+
+		default:
+			throw new IllegalArgumentException();
+		}
+
+		return extension;
+	}
+
+
 	public synchronized long getNewID(){
 		return mIDCounter++;
 	}
 
 	@Override
-	public Bitmap fromDisk(String key, InputStream in) {
+	protected Bitmap fromDisk(String key, InputStream in) {
 		final SoftReference<Bitmap> memCached = mMemCache.get(key);
 		if (memCached != null){
 			final Bitmap bitmap = memCached.get();
@@ -91,36 +133,15 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	}
 
 	@Override
-	public void toDisk(String key, Bitmap image, OutputStream out) {
+	protected void toDisk(String key, Bitmap image, OutputStream out) {
 		mMemCache.put(key, new SoftReference<Bitmap>(image));
 
 		Log.d(TAG, "cache write for key "+key);
 		if (image != null){
-			image.compress(CompressFormat.JPEG, 85, out);
+			image.compress(mCompressFormat, mQuality, out);
 		}else{
 			Log.e(TAG, "attempting to write null image to cache");
 		}
-	}
-
-	public interface OnImageLoadListener {
-		public void onImageLoaded(long id, Uri imageUri, Bitmap image);
-	}
-
-	private static ImageCache mInstance;
-
-	public static ImageCache getInstance(Context context){
-		if (mInstance == null){
-			mInstance = new ImageCache(context, true);
-		}
-		return mInstance;
-	}
-
-	private final HttpClient hc;
-
-
-	private ImageCache(Context context, boolean useDiskCache) {
-		super(context.getCacheDir(), null, ".jpg");
-		hc = getHttpClient();
 	}
 
 	/**
@@ -231,13 +252,14 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 				return new LoadResult(id, uri, bmp);
 
+			// TODO this exception came about, no idea why: java.lang.IllegalArgumentException: Parser may not be null
+			} catch (final IllegalArgumentException e){
+				e.printStackTrace();
 			} catch (final OutOfMemoryError oom){
 				oomClear();
 			} catch (final ClientProtocolException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (final IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			return null;
@@ -360,5 +382,11 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         	}
 
     		return bmap;
+	}
+
+
+
+	public interface OnImageLoadListener {
+		public void onImageLoaded(long id, Uri imageUri, Bitmap image);
 	}
 }
