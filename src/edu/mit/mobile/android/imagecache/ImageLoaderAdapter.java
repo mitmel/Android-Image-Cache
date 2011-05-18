@@ -19,6 +19,7 @@ package edu.mit.mobile.android.imagecache;
 import java.lang.ref.SoftReference;
 import java.util.HashMap;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.util.Log;
@@ -49,6 +50,47 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 	//	TAG_IMAGE_URI 			= R.id.icon,
 		TAG_SECONDARY_IMAGE_URI = R.id.message; // XXX these are arbitrary for the moment. Should fix.
 */
+
+	public static final int
+		UNIT_PX = 0,
+		UNIT_DIP = 1;
+
+	/**
+	 * @param context
+	 * @param wrapped
+	 * @param cache
+	 * @param imageViewIDs
+	 * @param width in the specified unit
+	 * @param height in the specified unit
+	 * @param unit one of UNIT_PX or UNIT_DIP
+	 */
+	public ImageLoaderAdapter(Context context, ListAdapter wrapped, ImageCache cache, int[] imageViewIDs, int width, int height, int unit) {
+		super(wrapped);
+
+		mImageViewIDs = imageViewIDs;
+		mCache = cache;
+		mCache.registerOnImageLoadListener(this);
+
+
+
+		switch (unit){
+		case UNIT_PX:
+			mHeight = height;
+			mWidth = width;
+			break;
+
+		case UNIT_DIP:{
+			final float scale = context.getResources().getDisplayMetrics().density;
+			mHeight = (int) (height * scale);
+			mWidth = (int) (width * scale);
+		}break;
+
+		default:
+			throw new IllegalArgumentException("invalid unit type");
+
+		}
+	}
+
 	/**
 	 * @param wrapped
 	 * @param cache
@@ -57,14 +99,7 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 	 * @param height in pixels
 	 */
 	public ImageLoaderAdapter(ListAdapter wrapped, ImageCache cache, int[] imageViewIDs, int width, int height) {
-		super(wrapped);
-
-		mImageViewIDs = imageViewIDs;
-		mCache = cache;
-		mCache.registerOnImageLoadListener(this);
-
-		mHeight = height;
-		mWidth = width;
+		this(null, wrapped, cache, imageViewIDs, width, height, UNIT_PX);
 	}
 
 	@Override

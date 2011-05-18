@@ -138,7 +138,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 		Log.d(TAG, "cache write for key "+key);
 		if (image != null){
-			image.compress(mCompressFormat, mQuality, out);
+			if (!image.compress(mCompressFormat, mQuality, out)){
+				Log.e(TAG, "error writing compressed image to disk for key "+key);
+			}
 		}else{
 			Log.e(TAG, "attempting to write null image to cache");
 		}
@@ -245,8 +247,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 						}
 					}
 					if (bmp != null){
-						Log.e(TAG, "got null bitmap for request to scale "+uri);
 						ImageCache.this.put(scaledKey, bmp);
+					}else{
+						Log.e(TAG, "got null bitmap for request to scale "+uri);
 					}
 				}
 
@@ -322,6 +325,12 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	private Bitmap scaleLocalImage(File localFile, int width, int height) throws ClientProtocolException, IOException {
 
 		Bitmap bmp;
+		if (!localFile.exists()){
+			throw new IOException("local file does not exist: " + localFile);
+		}
+		if (!localFile.canRead()){
+			throw new IOException("cannot read from local file: " + localFile);
+		}
 
 		final Bitmap prescale = BitmapFactory.decodeFile(localFile.getAbsolutePath());
 		if (prescale != null){
