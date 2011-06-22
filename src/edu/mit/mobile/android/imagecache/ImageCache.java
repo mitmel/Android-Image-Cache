@@ -49,17 +49,22 @@ import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.util.Log;
+import android.widget.ImageView;
 
 import com.commonsware.cwac.task.AsyncTaskEx;
 
 /**
- * <p>An image download-and-cacher that also knows how to efficiently generate
- * thumbnails of various sizes.</p>
+ * <p>
+ * An image download-and-cacher that also knows how to efficiently generate
+ * thumbnails of various sizes.
+ * </p>
  *
- * <p>The cache is shared with the entire process, so make sure you
+ * <p>
+ * The cache is shared with the entire process, so make sure you
  * {@link #registerOnImageLoadListener(OnImageLoadListener)} and
  * {@link #unregisterOnImageLoadListener(OnImageLoadListener)} any load
- * listeners in your activities.</p>
+ * listeners in your activities.
+ * </p>
  *
  * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
  *
@@ -379,13 +384,22 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 	/**
 	 * Checks the cache for an image matching the given criteria and returns it.
-	 * If it isn't immediately available, calls {@link #scheduleLoadImage}
+	 * If it isn't immediately available, calls {@link #scheduleLoadImage}.
 	 *
 	 * @param id
+	 *            An ID to keep track of image load requests. For one-off loads,
+	 *            this can just be the ID of the {@link ImageView}. Otherwise,
+	 *            an unique ID can be acquired using {@link #getNewID()}.
+	 *
 	 * @param image
+	 *            the image to be loaded. Can be a local file or a network
+	 *            resource.
 	 * @param width
+	 *            the maximum width of the resulting image
 	 * @param height
-	 * @return
+	 *            the maximum height of the resulting image
+	 * @return the cached bitmap if it's available immediately or null if it
+	 *         needs to be loaded asynchronously.
 	 */
 	public Bitmap loadImage(long id, Uri image, int width, int height) {
 		final Bitmap res = get(getKey(image, width, height));
@@ -396,16 +410,21 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	}
 
 	/**
-	 * Schedules a load of the given image. Will call the
-	 * {@link OnImageLoadListener} with the loaded bitmap when successfully
-	 * loaded from the network.
+	 * Schedules a load of the given image. When the bitmap has finished loading
+	 * and scaling, all registered {@link OnImageLoadListener}s will be called.
 	 *
 	 * @param id
-	 *            An ID for you to keep track of your image load requests.
+	 *            An ID to keep track of image load requests. For one-off loads,
+	 *            this can just be the ID of the {@link ImageView}. Otherwise,
+	 *            an unique ID can be acquired using {@link #getNewID()}.
 	 *
 	 * @param image
+	 *            the image to be loaded. Can be a local file or a network
+	 *            resource.
 	 * @param width
+	 *            the maximum width of the resulting image
 	 * @param height
+	 *            the maximum height of the resulting image
 	 */
 	public void scheduleLoadImage(long id, Uri image, int width, int height) {
 		final ImageLoadTask imt = new ImageLoadTask();
