@@ -1,4 +1,5 @@
 package edu.mit.mobile.android.imagecache;
+
 /*
  * Copyright (C) 2011  MIT Mobile Experience Lab
  *
@@ -41,6 +42,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.HttpParams;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
@@ -51,13 +53,20 @@ import android.util.Log;
 import com.commonsware.cwac.task.AsyncTaskEx;
 
 /**
- * An image download-and-cache that also knows how to efficiently generate thumbnails of various sizes.
+ * <p>An image download-and-cacher that also knows how to efficiently generate
+ * thumbnails of various sizes.</p>
+ *
+ * <p>The cache is shared with the entire process, so make sure you
+ * {@link #registerOnImageLoadListener(OnImageLoadListener)} and
+ * {@link #unregisterOnImageLoadListener(OnImageLoadListener)} any load
+ * listeners in your activities.</p>
  *
  * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
  *
  */
 public class ImageCache extends DiskCache<String, Bitmap> {
 	private static final String TAG = ImageCache.class.getSimpleName();
+
 	static final boolean DEBUG = false;
 
 	private final HashSet<OnImageLoadListener> mImageLoadListeners = new HashSet<ImageCache.OnImageLoadListener>();
@@ -74,8 +83,14 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	private final int mQuality;
 
 	// TODO make it so this is customizable on the instance level.
-	public static ImageCache getInstance(Context context){
-		if (mInstance == null){
+	/**
+	 * Gets an instance of the cache.
+	 *
+	 * @param context
+	 * @return an instance of the cache
+	 */
+	public static ImageCache getInstance(Context context) {
+		if (mInstance == null) {
 			mInstance = new ImageCache(context, CompressFormat.JPEG, 85);
 		}
 		return mInstance;
@@ -89,9 +104,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		mQuality = quality;
 	}
 
-	private static String getExtension(CompressFormat format){
+	private static String getExtension(CompressFormat format) {
 		String extension;
-		switch(format){
+		switch (format) {
 		case JPEG:
 			extension = ".jpg";
 			break;
@@ -107,17 +122,23 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		return extension;
 	}
 
-
-	public synchronized long getNewID(){
+	/**
+	 * If loading a number of images where you don't have a unique ID to
+	 * represent the individual load, this can be used to generate a sequential
+	 * ID.
+	 *
+	 * @return a new unique ID
+	 */
+	public synchronized long getNewID() {
 		return mIDCounter++;
 	}
 
 	@Override
 	protected Bitmap fromDisk(String key, InputStream in) {
 		final SoftReference<Bitmap> memCached = mMemCache.get(key);
-		if (memCached != null){
+		if (memCached != null) {
 			final Bitmap bitmap = memCached.get();
-			if (bitmap != null){
+			if (bitmap != null) {
 				if (DEBUG) {
 					Log.d(TAG, "mem cache hit");
 				}
@@ -132,7 +153,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 			mMemCache.put(key, new SoftReference<Bitmap>(image));
 			return image;
 
-		}catch (final OutOfMemoryError oom){
+		} catch (final OutOfMemoryError oom) {
 			oomClear();
 			return null;
 		}
@@ -143,29 +164,33 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		mMemCache.put(key, new SoftReference<Bitmap>(image));
 
 		if (DEBUG) {
-			Log.d(TAG, "cache write for key "+key);
+			Log.d(TAG, "cache write for key " + key);
 		}
-		if (image != null){
-			if (!image.compress(mCompressFormat, mQuality, out)){
-				Log.e(TAG, "error writing compressed image to disk for key "+key);
+		if (image != null) {
+			if (!image.compress(mCompressFormat, mQuality, out)) {
+				Log.e(TAG, "error writing compressed image to disk for key "
+						+ key);
 			}
-		}else{
+		} else {
 			Log.e(TAG, "attempting to write null image to cache");
 		}
 	}
 
 	/**
-	 * Gets an instance of AndroidHttpClient if the devices has it (it was introduced in 2.2),
-	 * or falls back on a http client that should work reasonably well.
+	 * Gets an instance of AndroidHttpClient if the devices has it (it was
+	 * introduced in 2.2), or falls back on a http client that should work
+	 * reasonably well.
 	 *
 	 * @return a working instance of an HttpClient
 	 */
-	private HttpClient getHttpClient(){
+	private HttpClient getHttpClient() {
 		HttpClient ahc;
 		try {
 			@SuppressWarnings("rawtypes")
-			final Class ahcClass = Class.forName("android.net.http.AndroidHttpClient");
-			final Method newInstance = ahcClass.getMethod("newInstance", String.class);
+			final Class ahcClass = Class
+					.forName("android.net.http.AndroidHttpClient");
+			final Method newInstance = ahcClass.getMethod("newInstance",
+					String.class);
 			ahc = (HttpClient) newInstance.invoke(null, "ImageCache");
 
 		} catch (final ClassNotFoundException e) {
@@ -173,65 +198,119 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 			final HttpParams params = dhc.getParams();
 			dhc = null;
 
-	        final SchemeRegistry registry = new SchemeRegistry();
-	        registry.register(new Scheme("http",PlainSocketFactory.getSocketFactory(), 80));
-	        registry.register(new Scheme("https",SSLSocketFactory.getSocketFactory(), 443));
+			final SchemeRegistry registry = new SchemeRegistry();
+			registry.register(new Scheme("http", PlainSocketFactory
+					.getSocketFactory(), 80));
+			registry.register(new Scheme("https", SSLSocketFactory
+					.getSocketFactory(), 443));
 
-	        final ThreadSafeClientConnManager manager = new ThreadSafeClientConnManager(params, registry);
-	        ahc = new DefaultHttpClient(manager, params);
+			final ThreadSafeClientConnManager manager = new ThreadSafeClientConnManager(
+					params, registry);
+			ahc = new DefaultHttpClient(manager, params);
 
 		} catch (final NoSuchMethodException e) {
 
-			final RuntimeException re = new RuntimeException("Programming error");
+			final RuntimeException re = new RuntimeException(
+					"Programming error");
 			re.initCause(e);
 			throw re;
 
 		} catch (final IllegalAccessException e) {
-			final RuntimeException re = new RuntimeException("Programming error");
+			final RuntimeException re = new RuntimeException(
+					"Programming error");
 			re.initCause(e);
 			throw re;
 
 		} catch (final InvocationTargetException e) {
-			final RuntimeException re = new RuntimeException("Programming error");
+			final RuntimeException re = new RuntimeException(
+					"Programming error");
 			re.initCause(e);
 			throw re;
 		}
 		return ahc;
 	}
 
-	public void registerOnImageLoadListener(OnImageLoadListener onImageLoadListener){
+	/**
+	 * <p>
+	 * Registers an {@link OnImageLoadListener} with the cache. When an image is
+	 * loaded asynchronously either directly by way of
+	 * {@link #scheduleLoadImage(long, Uri, int, int)} or indirectly by
+	 * {@link #loadImage(long, Uri, int, int)}, any registered listeners will
+	 * get called.
+	 * </p>
+	 *
+	 * <p>
+	 * This should probably be called from {@link Activity#onResume()}.
+	 * </p>
+	 *
+	 * @param onImageLoadListener
+	 */
+	public void registerOnImageLoadListener(
+			OnImageLoadListener onImageLoadListener) {
 		mImageLoadListeners.add(onImageLoadListener);
 	}
 
-	public void unregisterOnImageLoadListener(OnImageLoadListener onImageLoadListener){
+	/**
+	 * <p>
+	 * Unregisters the listener with the cache. This will not cancel any pending
+	 * load requests.
+	 * </p>
+	 *
+	 * <p>
+	 * This should probably be called from {@link Activity#onPause()}.
+	 * </p>
+	 *
+	 * @param onImageLoadListener
+	 */
+	public void unregisterOnImageLoadListener(
+			OnImageLoadListener onImageLoadListener) {
 		mImageLoadListeners.remove(onImageLoadListener);
 	}
 
-
-	private class LoadResult{
+	private class LoadResult {
 		public LoadResult(long id, Uri image, Bitmap bitmap) {
 			this.id = id;
 			this.bitmap = bitmap;
 			this.image = image;
 		}
+
 		final Uri image;
 		final long id;
 		final Bitmap bitmap;
 	}
 
-	public String getKey(Uri uri){
+	/**
+	 * @param uri
+	 *            the image uri
+	 * @return a key unique to the given uri
+	 */
+	public String getKey(Uri uri) {
 		return uri.toString();
 	}
 
-	public String getKey(Uri uri, int width, int height){
-		return uri.buildUpon().appendQueryParameter("width", String.valueOf(width)).appendQueryParameter("height", String.valueOf(height)).build().toString();
+	/**
+	 * Returns an opaque cache key representing the given uri, width and height.
+	 *
+	 * @param uri
+	 *            an image uri
+	 * @param width
+	 *            the desired image max width
+	 * @param height
+	 *            the desired image max height
+	 * @return a cache key unique to the given parameters
+	 */
+	public String getKey(Uri uri, int width, int height) {
+		return uri.buildUpon()
+				.appendQueryParameter("width", String.valueOf(width))
+				.appendQueryParameter("height", String.valueOf(height)).build()
+				.toString();
 	}
 
-	private class ImageLoadTask extends AsyncTaskEx<Object, Void, LoadResult>{
+	private class ImageLoadTask extends AsyncTaskEx<Object, Void, LoadResult> {
 
 		@Override
 		protected LoadResult doInBackground(Object... params) {
-			final long id = (Long)params[0];
+			final long id = (Long) params[0];
 			final Uri uri = (Uri) params[1];
 			final int width = (Integer) params[2];
 			final int height = (Integer) params[3];
@@ -240,33 +319,37 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 			try {
 				Bitmap bmp = ImageCache.this.get(scaledKey);
-				if (bmp == null){
-					if ("file".equals(uri.getScheme())){
-						bmp = scaleLocalImage(new File(uri.getPath()), width, height);
-					}else{
+				if (bmp == null) {
+					if ("file".equals(uri.getScheme())) {
+						bmp = scaleLocalImage(new File(uri.getPath()), width,
+								height);
+					} else {
 						final String sourceKey = getKey(uri);
 						Bitmap sourceBitmap = ImageCache.this.get(sourceKey);
-						if (sourceBitmap == null){
+						if (sourceBitmap == null) {
 							sourceBitmap = downloadImage(uri);
 							ImageCache.this.put(sourceKey, sourceBitmap);
 						}
-						if (sourceBitmap != null){
-							bmp = scaleBitmapPreserveAspect(sourceBitmap, width, height);
+						if (sourceBitmap != null) {
+							bmp = scaleBitmapPreserveAspect(sourceBitmap,
+									width, height);
 						}
 					}
-					if (bmp != null){
+					if (bmp != null) {
 						ImageCache.this.put(scaledKey, bmp);
-					}else{
-						Log.e(TAG, "got null bitmap for request to scale "+uri);
+					} else {
+						Log.e(TAG, "got null bitmap for request to scale "
+								+ uri);
 					}
 				}
 
 				return new LoadResult(id, uri, bmp);
 
-			// TODO this exception came about, no idea why: java.lang.IllegalArgumentException: Parser may not be null
-			} catch (final IllegalArgumentException e){
+				// TODO this exception came about, no idea why:
+				// java.lang.IllegalArgumentException: Parser may not be null
+			} catch (final IllegalArgumentException e) {
 				e.printStackTrace();
-			} catch (final OutOfMemoryError oom){
+			} catch (final OutOfMemoryError oom) {
 				oomClear();
 			} catch (final ClientProtocolException e) {
 				e.printStackTrace();
@@ -278,24 +361,25 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 		@Override
 		protected void onPostExecute(LoadResult result) {
-			if (result == null){
+			if (result == null) {
 				Log.w(TAG, "ImageLoadTask result was null");
 				return;
 			}
 
-			for (final OnImageLoadListener listener: mImageLoadListeners){
+			for (final OnImageLoadListener listener : mImageLoadListeners) {
 				listener.onImageLoaded(result.id, result.image, result.bitmap);
 			}
 		};
 	}
 
-	private void oomClear(){
+	private void oomClear() {
 		Log.w(TAG, "out of memory, clearing mem cache");
 		mMemCache.clear();
 	}
 
 	/**
-	 * Checks the cache for an image matching the given criteria and returns it. If it isn't immediately available, calls {@link #scheduleLoadImage}
+	 * Checks the cache for an image matching the given criteria and returns it.
+	 * If it isn't immediately available, calls {@link #scheduleLoadImage}
 	 *
 	 * @param id
 	 * @param image
@@ -303,65 +387,98 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	 * @param height
 	 * @return
 	 */
-	public Bitmap loadImage(long id, Uri image, int width, int height){
+	public Bitmap loadImage(long id, Uri image, int width, int height) {
 		final Bitmap res = get(getKey(image, width, height));
-		if (res == null){
+		if (res == null) {
 			scheduleLoadImage(id, image, width, height);
 		}
 		return res;
 	}
 
 	/**
-	 * Schedules a load of the given image. Will call the {@link OnImageLoadListener} with the loaded bitmap when successfully loaded from the network.
+	 * Schedules a load of the given image. Will call the
+	 * {@link OnImageLoadListener} with the loaded bitmap when successfully
+	 * loaded from the network.
 	 *
-	 * @param id An ID for you to keep track of your image load requests.
+	 * @param id
+	 *            An ID for you to keep track of your image load requests.
 	 *
 	 * @param image
 	 * @param width
 	 * @param height
 	 */
-	public void scheduleLoadImage(long id, Uri image, int width, int height){
+	public void scheduleLoadImage(long id, Uri image, int width, int height) {
 		final ImageLoadTask imt = new ImageLoadTask();
 
 		imt.execute(id, image, width, height);
-
 	}
 
-	public void cancelLoads(){
+	/**
+	 * Cancels all the asynchronous image loads.
+	 */
+	public void cancelLoads() {
 		ImageLoadTask.clearQueue();
 	}
 
-	private Bitmap scaleLocalImage(File localFile, int width, int height) throws ClientProtocolException, IOException {
+	/**
+	 * Blocking call to scale a local file. Scales using
+	 * {@link #scaleBitmapPreserveAspect(Bitmap, int, int)}.
+	 *
+	 * @param localFile
+	 *            local image file to be scaled
+	 * @param width
+	 *            maximum width
+	 * @param height
+	 *            maximum height
+	 * @return the scaled image
+	 * @throws ClientProtocolException
+	 * @throws IOException
+	 */
+	private Bitmap scaleLocalImage(File localFile, int width, int height)
+			throws ClientProtocolException, IOException {
 
 		Bitmap bmp;
-		if (!localFile.exists()){
+		if (!localFile.exists()) {
 			throw new IOException("local file does not exist: " + localFile);
 		}
-		if (!localFile.canRead()){
+		if (!localFile.canRead()) {
 			throw new IOException("cannot read from local file: " + localFile);
 		}
 
-		final Bitmap prescale = BitmapFactory.decodeFile(localFile.getAbsolutePath());
-		if (prescale != null){
+		final Bitmap prescale = BitmapFactory.decodeFile(localFile
+				.getAbsolutePath());
+		if (prescale != null) {
 			bmp = scaleBitmapPreserveAspect(prescale, width, height);
-			if (prescale != bmp){
+			if (prescale != bmp) {
 				prescale.recycle();
 			}
-		}else{
+		} else {
 			bmp = null;
 		}
 
 		return bmp;
 	}
 
-	private Bitmap downloadImage(Uri uri) throws ClientProtocolException, IOException{
+	/**
+	 * Blocking call to download an image.
+	 *
+	 * @param uri
+	 *            the location of the image
+	 * @return a decoded bitmap
+	 * @throws ClientProtocolException
+	 *             if the HTTP response code wasn't 200 or any other HTTP errors
+	 * @throws IOException
+	 */
+	private Bitmap downloadImage(Uri uri) throws ClientProtocolException,
+			IOException {
 
 		final HttpGet get = new HttpGet(uri.toString());
 
 		final HttpResponse hr = hc.execute(get);
 		final StatusLine hs = hr.getStatusLine();
-		if (hs.getStatusCode() != 200){
-			throw new HttpResponseException(hs.getStatusCode(), hs.getReasonPhrase());
+		if (hs.getStatusCode() != 200) {
+			throw new HttpResponseException(hs.getStatusCode(),
+					hs.getReasonPhrase());
 		}
 
 		final HttpEntity ent = hr.getEntity();
@@ -370,39 +487,43 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		try {
 			bmp = BitmapFactory.decodeStream(ent.getContent());
 
-		}finally{
+		} finally {
 			ent.consumeContent();
 		}
 		return bmp;
 	}
 
 	/**
-	 * Scale a bitmap so that it fits within the specified width and height, preserving its aspect ratio.
+	 * Scale a bitmap so that it fits within the specified width and height,
+	 * preserving its aspect ratio.
 	 *
-	 * @param bmap The input bitmap to be scaled. If the image would be upscaled, this bitmap is returned without scaling.
+	 * @param bmap
+	 *            The input bitmap to be scaled. If the image would be upscaled,
+	 *            this bitmap is returned without scaling.
 	 * @return an image that's scaled to be at most the given width/height.
 	 */
-	private Bitmap scaleBitmapPreserveAspect(Bitmap bmap, int width, int height){
-        	if (bmap == null || height == 0 || width == 0){
-        		return null;
-        	}
+	private Bitmap scaleBitmapPreserveAspect(Bitmap bmap, int width, int height) {
+		if (bmap == null || height == 0 || width == 0) {
+			return null;
+		}
 
-        	final int origWidth = bmap.getWidth();
-        	final int origHeight = bmap.getHeight();
-        	final float scaleWidth = (float)height / origWidth;
-        	final float scaleHeight = (float)width / origHeight;
-        	final float scale = Math.min(scaleWidth, scaleHeight);
+		final int origWidth = bmap.getWidth();
+		final int origHeight = bmap.getHeight();
+		final float scaleWidth = (float) height / origWidth;
+		final float scaleHeight = (float) width / origHeight;
+		final float scale = Math.min(scaleWidth, scaleHeight);
 
-        	// prevent upscaling, as the drawable will happily take care of this for us.
-        	if (scale < 1){
-        		final Bitmap scaled = Bitmap.createScaledBitmap(bmap, (int)(origWidth * scale), (int)(origHeight * scale), true);
-        		bmap = scaled;
-        	}
+		// prevent upscaling, as the drawable will happily take care of this for
+		// us.
+		if (scale < 1) {
+			final Bitmap scaled = Bitmap
+					.createScaledBitmap(bmap, (int) (origWidth * scale),
+							(int) (origHeight * scale), true);
+			bmap = scaled;
+		}
 
-    		return bmap;
+		return bmap;
 	}
-
-
 
 	public interface OnImageLoadListener {
 		public void onImageLoaded(long id, Uri imageUri, Bitmap image);

@@ -38,6 +38,7 @@ import android.util.Log;
  * @param <K> the key to store/retrieve the value
  * @param <V> the value that will be stored to disk
  */
+// TODO add automatic cache cleanup so low disk conditions can be met
 public abstract class DiskCache<K, V> {
 	private static final String TAG = "DiskCache";
 
