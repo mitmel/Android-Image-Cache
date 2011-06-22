@@ -544,7 +544,22 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		return bmap;
 	}
 
+	/**
+	 * Implement this and register it using
+	 * {@link ImageCache#registerOnImageLoadListener(OnImageLoadListener)} to be
+	 * notified when asynchronous image loads have completed.
+	 *
+	 * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
+	 *
+	 */
 	public interface OnImageLoadListener {
+		/**
+		 * Called when the image has been loaded and scaled.
+		 *
+		 * @param id the ID provided by {@link ImageCache#loadImage(long, Uri, int, int)} or {@link ImageCache#scheduleLoadImage(long, Uri, int, int)}
+		 * @param imageUri the uri of the image that was originally requested
+		 * @param image the loaded and scaled image
+		 */
 		public void onImageLoaded(long id, Uri imageUri, Bitmap image);
 	}
 }
