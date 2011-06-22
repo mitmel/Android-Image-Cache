@@ -36,6 +36,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.HttpParams;
@@ -57,6 +58,7 @@ import com.commonsware.cwac.task.AsyncTaskEx;
  */
 public class ImageCache extends DiskCache<String, Bitmap> {
 	private static final String TAG = ImageCache.class.getSimpleName();
+	static final boolean DEBUG = false;
 
 	private final HashSet<OnImageLoadListener> mImageLoadListeners = new HashSet<ImageCache.OnImageLoadListener>();
 
@@ -116,11 +118,15 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		if (memCached != null){
 			final Bitmap bitmap = memCached.get();
 			if (bitmap != null){
-				Log.d(TAG, "mem cache hit");
+				if (DEBUG) {
+					Log.d(TAG, "mem cache hit");
+				}
 				return bitmap;
 			}
 		}
-		Log.d(TAG, "disk cache hit");
+		if (DEBUG) {
+			Log.d(TAG, "disk cache hit");
+		}
 		try {
 			final Bitmap image = BitmapFactory.decodeStream(in);
 			mMemCache.put(key, new SoftReference<Bitmap>(image));
@@ -136,7 +142,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	protected void toDisk(String key, Bitmap image, OutputStream out) {
 		mMemCache.put(key, new SoftReference<Bitmap>(image));
 
-		Log.d(TAG, "cache write for key "+key);
+		if (DEBUG) {
+			Log.d(TAG, "cache write for key "+key);
+		}
 		if (image != null){
 			if (!image.compress(mCompressFormat, mQuality, out)){
 				Log.e(TAG, "error writing compressed image to disk for key "+key);
@@ -167,7 +175,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 	        final SchemeRegistry registry = new SchemeRegistry();
 	        registry.register(new Scheme("http",PlainSocketFactory.getSocketFactory(), 80));
-	        registry.register(new Scheme("https",PlainSocketFactory.getSocketFactory(), 80));
+	        registry.register(new Scheme("https",SSLSocketFactory.getSocketFactory(), 443));
 
 	        final ThreadSafeClientConnManager manager = new ThreadSafeClientConnManager(params, registry);
 	        ahc = new DefaultHttpClient(manager, params);
@@ -271,6 +279,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		@Override
 		protected void onPostExecute(LoadResult result) {
 			if (result == null){
+				Log.w(TAG, "ImageLoadTask result was null");
 				return;
 			}
 

@@ -46,11 +46,6 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 
 	private final int mWidth, mHeight;
 
-	/*public static final int
-	//	TAG_IMAGE_URI 			= R.id.icon,
-		TAG_SECONDARY_IMAGE_URI = R.id.message; // XXX these are arbitrary for the moment. Should fix.
-*/
-
 	public static final int
 		UNIT_PX = 0,
 		UNIT_DIP = 1;
@@ -114,6 +109,9 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 
 		for (final int id: mImageViewIDs){
 			final ImageView iv = (ImageView) v.findViewById(id);
+			if (iv == null){
+				continue;
+			}
 			final Uri tag = (Uri) iv.getTag();
 			if (tag != null){
 				final long imageID = mCache.getNewID();
@@ -121,7 +119,9 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 				if (bmp != null){
 					iv.setImageBitmap(bmp);
 				}else{
-					Log.d(TAG, "scheduling load with ID: "+ imageID+"; URI;"+ tag);
+					if (ImageCache.DEBUG) {
+						Log.d(TAG, "scheduling load with ID: "+ imageID+"; URI;"+ tag);
+					}
 					mImageViewsToLoad.put(imageID, new SoftReference<ImageView>(iv));
 				}
 			}
@@ -140,7 +140,9 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 			mImageViewsToLoad.remove(id);
 			return;
 		}
-		Log.d(TAG, "loading ID "+id + " with an image");
+		if (ImageCache.DEBUG){
+			Log.d(TAG, "loading ID "+id + " with an image");
+		}
 		if (imageUri.equals(iv.getTag())) {
 			iv.setImageBitmap(image);
 		}
