@@ -191,8 +191,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	private HttpClient getHttpClient() {
 		HttpClient ahc;
 		try {
-			@SuppressWarnings("rawtypes")
-			final Class ahcClass = Class
+			final Class<?> ahcClass = Class
 					.forName("android.net.http.AndroidHttpClient");
 			final Method newInstance = ahcClass.getMethod("newInstance",
 					String.class);
