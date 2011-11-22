@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import android.app.ListActivity;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -41,8 +40,6 @@ public class InteractiveDemo extends ListActivity {
         setContentView(R.layout.main);
 
         final Gallery gallery = (Gallery) findViewById(R.id.gallery);
-
-        final Uri casts = Uri.parse("content://edu.mit.mobile.android.locast.provider/casts");
 
         mCache = ImageCache.getInstance(this);
 
