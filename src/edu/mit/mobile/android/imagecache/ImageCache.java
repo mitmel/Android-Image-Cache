@@ -74,7 +74,7 @@ import android.widget.ImageView;
 public class ImageCache extends DiskCache<String, Bitmap> {
 	private static final String TAG = ImageCache.class.getSimpleName();
 
-	static final boolean DEBUG = true;
+	static final boolean DEBUG = false;
 
 	private final HashSet<OnImageLoadListener> mImageLoadListeners = new HashSet<ImageCache.OnImageLoadListener>();
 
@@ -445,7 +445,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	 * Cancels all the asynchronous image loads.
 	 */
 	public void cancelLoads() {
-		//ImageLoadTask.
+		// TODO actually make it possible to cancel tasks
 	}
 
 	/**
@@ -462,7 +462,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	 * @throws ClientProtocolException
 	 * @throws IOException
 	 */
-	private Bitmap scaleLocalImage(File localFile, int width, int height)
+	private static Bitmap scaleLocalImage(File localFile, int width, int height)
 			throws ClientProtocolException, IOException {
 
 		if (DEBUG){
@@ -477,33 +477,34 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 			throw new IOException("cannot read from local file: " + localFile);
 		}
 
-	      // decode image size
-	      final BitmapFactory.Options o = new BitmapFactory.Options();
-	      o.inJustDecodeBounds = true;
-	      final FileInputStream fis = new FileInputStream(localFile);
+		// the below borrowed from:
+		// https://github.com/thest1/LazyList/blob/master/src/com/fedorvlasov/lazylist/ImageLoader.java
 
-	      BitmapFactory.decodeStream(fis, null, o);
+		// decode image size
+		final BitmapFactory.Options o = new BitmapFactory.Options();
+		o.inJustDecodeBounds = true;
+		final FileInputStream fis = new FileInputStream(localFile);
 
-	      // Find the correct scale value. It should be the power of 2.
-	      final int REQUIRED_SIZE = width;
-	      int width_tmp = o.outWidth, height_tmp = o.outHeight;
-	      int scale = 1;
-	      while (true) {
-	        if (width_tmp / 2 < REQUIRED_SIZE || height_tmp / 2 < REQUIRED_SIZE) {
+		BitmapFactory.decodeStream(fis, null, o);
+
+		// Find the correct scale value. It should be the power of 2.
+		final int REQUIRED_SIZE = width;
+		int width_tmp = o.outWidth, height_tmp = o.outHeight;
+		int scale = 1;
+		while (true) {
+			if (width_tmp / 2 < REQUIRED_SIZE || height_tmp / 2 < REQUIRED_SIZE) {
 				break;
 			}
-	        width_tmp /= 2;
-	        height_tmp /= 2;
-	        scale *= 2;
-	      }
+			width_tmp /= 2;
+			height_tmp /= 2;
+			scale *= 2;
+		}
 
-	      // decode with inSampleSize
-	      final BitmapFactory.Options o2 = new BitmapFactory.Options();
-	      o2.inSampleSize = scale;
-	      final Bitmap prescale = BitmapFactory.decodeStream(fis, null, o2);
+		// decode with inSampleSize
+		final BitmapFactory.Options o2 = new BitmapFactory.Options();
+		o2.inSampleSize = scale;
+		final Bitmap prescale = BitmapFactory.decodeStream(fis, null, o2);
 
-		//final Bitmap prescale = BitmapFactory.decodeFile(localFile
-				//.getAbsolutePath());
 		if (prescale != null) {
 			bmp = scaleBitmapPreserveAspect(prescale, width, height);
 			if (prescale != bmp) {
@@ -570,7 +571,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	 *            this bitmap is returned without scaling.
 	 * @return an image that's scaled to be at most the given width/height.
 	 */
-	private Bitmap scaleBitmapPreserveAspect(Bitmap bmap, int width, int height) {
+	private static Bitmap scaleBitmapPreserveAspect(Bitmap bmap, int width, int height) {
 		if (bmap == null || height == 0 || width == 0) {
 			return null;
 		}
