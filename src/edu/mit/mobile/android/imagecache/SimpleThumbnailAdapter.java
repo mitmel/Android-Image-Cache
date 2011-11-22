@@ -15,8 +15,6 @@ public class SimpleThumbnailAdapter extends SimpleAdapter {
 	private final Drawable defaultImages[];
 	private final int[] mImageIDs;
 
-	private final Context mContext;
-
 	public SimpleThumbnailAdapter(Context context,
 			List<? extends Map<String, ?>> data, int layout, String[] from,
 			int[] to, int[]imageIDs) {
@@ -25,7 +23,6 @@ public class SimpleThumbnailAdapter extends SimpleAdapter {
 		final View v = LayoutInflater.from(context)
 				.inflate(layout, null, false);
 		defaultImages = new Drawable[imageIDs.length];
-		mContext = context;
 
 		mImageIDs = imageIDs;
 
