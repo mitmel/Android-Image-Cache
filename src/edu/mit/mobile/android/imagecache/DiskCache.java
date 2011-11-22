@@ -208,8 +208,11 @@ public abstract class DiskCache<K, V> {
 	 * @return a string uniquely representing the the key.
 	 */
 	public String hash(K key){
-		hash.update(key.toString().getBytes());
-		final byte[] ba = hash.digest();
+		final byte[] ba;
+		synchronized (hash){
+			hash.update(key.toString().getBytes());
+			ba = hash.digest();
+		}
 		return new BigInteger(ba).toString(16);
 	}
 }
