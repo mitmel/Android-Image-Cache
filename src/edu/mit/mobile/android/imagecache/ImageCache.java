@@ -17,14 +17,18 @@ package edu.mit.mobile.android.imagecache;
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ref.SoftReference;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.concurrent.RejectedExecutionException;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -47,10 +51,9 @@ import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.ImageView;
-
-import com.commonsware.cwac.task.AsyncTaskEx;
 
 /**
  * <p>
@@ -71,7 +74,7 @@ import com.commonsware.cwac.task.AsyncTaskEx;
 public class ImageCache extends DiskCache<String, Bitmap> {
 	private static final String TAG = ImageCache.class.getSimpleName();
 
-	static final boolean DEBUG = false;
+	static final boolean DEBUG = true;
 
 	private final HashSet<OnImageLoadListener> mImageLoadListeners = new HashSet<ImageCache.OnImageLoadListener>();
 
@@ -309,7 +312,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 				.toString();
 	}
 
-	private class ImageLoadTask extends AsyncTaskEx<Object, Void, LoadResult> {
+	private class ImageLoadTask extends AsyncTask<Object, Void, LoadResult> {
 
 		@Override
 		protected LoadResult doInBackground(Object... params) {
@@ -425,16 +428,24 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	 *            the maximum height of the resulting image
 	 */
 	public void scheduleLoadImage(long id, Uri image, int width, int height) {
+		if (DEBUG){
+			Log.d(TAG, "executing new ImageLoadTask");
+		}
 		final ImageLoadTask imt = new ImageLoadTask();
 
-		imt.execute(id, image, width, height);
+		try {
+			imt.execute(id, image, width, height);
+		}catch (final RejectedExecutionException re){
+			re.printStackTrace();
+			// oh well. At least we didn't crash!
+		}
 	}
 
 	/**
 	 * Cancels all the asynchronous image loads.
 	 */
 	public void cancelLoads() {
-		ImageLoadTask.clearQueue();
+		//ImageLoadTask.
 	}
 
 	/**
@@ -454,6 +465,10 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	private Bitmap scaleLocalImage(File localFile, int width, int height)
 			throws ClientProtocolException, IOException {
 
+		if (DEBUG){
+			Log.d(TAG, "scaleLocalImage(" + localFile + ", "+ width +", "+ height + ")");
+		}
+
 		Bitmap bmp;
 		if (!localFile.exists()) {
 			throw new IOException("local file does not exist: " + localFile);
@@ -462,19 +477,46 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 			throw new IOException("cannot read from local file: " + localFile);
 		}
 
-		final Bitmap prescale = BitmapFactory.decodeFile(localFile
-				.getAbsolutePath());
+	      // decode image size
+	      final BitmapFactory.Options o = new BitmapFactory.Options();
+	      o.inJustDecodeBounds = true;
+	      final FileInputStream fis = new FileInputStream(localFile);
+
+	      BitmapFactory.decodeStream(fis, null, o);
+
+	      // Find the correct scale value. It should be the power of 2.
+	      final int REQUIRED_SIZE = width;
+	      int width_tmp = o.outWidth, height_tmp = o.outHeight;
+	      int scale = 1;
+	      while (true) {
+	        if (width_tmp / 2 < REQUIRED_SIZE || height_tmp / 2 < REQUIRED_SIZE) {
+				break;
+			}
+	        width_tmp /= 2;
+	        height_tmp /= 2;
+	        scale *= 2;
+	      }
+
+	      // decode with inSampleSize
+	      final BitmapFactory.Options o2 = new BitmapFactory.Options();
+	      o2.inSampleSize = scale;
+	      final Bitmap prescale = BitmapFactory.decodeStream(fis, null, o2);
+
+		//final Bitmap prescale = BitmapFactory.decodeFile(localFile
+				//.getAbsolutePath());
 		if (prescale != null) {
 			bmp = scaleBitmapPreserveAspect(prescale, width, height);
 			if (prescale != bmp) {
 				prescale.recycle();
 			}
 		} else {
+			Log.e(TAG, localFile + " could not be decoded");
 			bmp = null;
 		}
 
 		return bmp;
 	}
+	private static final boolean USE_APACHE_NC = false;
 
 	/**
 	 * Blocking call to download an image.
@@ -489,23 +531,32 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	private Bitmap downloadImage(Uri uri) throws ClientProtocolException,
 			IOException {
 
-		final HttpGet get = new HttpGet(uri.toString());
-
-		final HttpResponse hr = hc.execute(get);
-		final StatusLine hs = hr.getStatusLine();
-		if (hs.getStatusCode() != 200) {
-			throw new HttpResponseException(hs.getStatusCode(),
-					hs.getReasonPhrase());
+		if (DEBUG){
+			Log.d(TAG, "downloadImage("+uri+")");
 		}
-
-		final HttpEntity ent = hr.getEntity();
 		Bitmap bmp;
+		if (USE_APACHE_NC){
+			final HttpGet get = new HttpGet(uri.toString());
 
-		try {
-			bmp = BitmapFactory.decodeStream(ent.getContent());
+			final HttpResponse hr = hc.execute(get);
+			final StatusLine hs = hr.getStatusLine();
+			if (hs.getStatusCode() != 200) {
+				throw new HttpResponseException(hs.getStatusCode(),
+						hs.getReasonPhrase());
+			}
 
-		} finally {
-			ent.consumeContent();
+			final HttpEntity ent = hr.getEntity();
+
+
+			try {
+				bmp = BitmapFactory.decodeStream(ent.getContent());
+
+			} finally {
+				ent.consumeContent();
+			}
+		}else{
+			final URLConnection con = new URL(uri.toString()).openConnection();
+			bmp = BitmapFactory.decodeStream(con.getInputStream());
 		}
 		return bmp;
 	}
@@ -522,6 +573,10 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	private Bitmap scaleBitmapPreserveAspect(Bitmap bmap, int width, int height) {
 		if (bmap == null || height == 0 || width == 0) {
 			return null;
+		}
+
+		if (DEBUG){
+			Log.d(TAG, "scaleBitmapPreserveAspect("+bmap + ", "+ width + ", " + height + ")");
 		}
 
 		final int origWidth = bmap.getWidth();

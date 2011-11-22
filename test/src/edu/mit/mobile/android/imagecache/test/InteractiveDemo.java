@@ -16,17 +16,20 @@ package edu.mit.mobile.android.imagecache.test;
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
 import android.app.ListActivity;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.BaseColumns;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Gallery;
 import android.widget.ListAdapter;
 import edu.mit.mobile.android.imagecache.ImageCache;
 import edu.mit.mobile.android.imagecache.ImageLoaderAdapter;
-import edu.mit.mobile.android.imagecache.SimpleThumbnailCursorAdapter;
+import edu.mit.mobile.android.imagecache.SimpleThumbnailAdapter;
 
 public class InteractiveDemo extends ListActivity {
     /** Called when the activity is first created. */
@@ -43,26 +46,35 @@ public class InteractiveDemo extends ListActivity {
 
         mCache = ImageCache.getInstance(this);
 
-        final ListAdapter castAdapter = new SimpleThumbnailCursorAdapter(this,
-        		R.layout.thumbnail_item,
-        		managedQuery(casts, new String[] {BaseColumns._ID, "thumbnail_uri"}, null, null, null),
-        		new String[]{"thumbnail_uri"},
-        		new int[]{R.id.thumb},
-        		new int[]{R.id.thumb}, 0);
+        final List<HashMap<String, String>> data = new ArrayList<HashMap<String,String>>();
 
-        final float scale = getResources().getDisplayMetrics().density;
+        data.add(addItem("locast tourism", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locast_tourism.jpg"));
+        data.add(addItem("green home", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/gha_01.jpg"));
+        data.add(addItem("green home 2", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/gha_05.jpg"));
+        data.add(addItem("Locast healthcare", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locast%20healthcare.jpg"));
+        data.add(addItem("locast h2flow 1", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/water%20project%20IMAGE-72dpi.jpg"));
+        data.add(addItem("locast h2flow 2", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/H2flOw_image1.jpg"));
+        data.add(addItem("locast h2flow 3", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/H2flOw_image2.jpg"));
+        data.add(addItem("locast unicef 1", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/Screen%20shot%202011-08-16%20at%204.05.57%20PM.png"));
+        data.add(addItem("locast unicef 2", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/Screen%20shot%202011-08-16%20at%204.14.00%20PM.png"));
+        data.add(addItem("locast unicef 3", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/DSC01492.JPG"));
+        data.add(addItem("memory traces", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/North%20end%20memory.jpg"));
+        data.add(addItem("uv tracking", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/MEL_LocastProjectsandNextTV2%2031_1.jpg"));
+        data.add(addItem("civic media 1", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/sites/mel-drudev.mit.edu/files/locast_civic_00.jpg"));
+        data.add(addItem("civic media 2", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locastPA2.jpg"));
+        data.add(addItem("civic media 3", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locastPA3.jpg"));
 
-        setListAdapter(new ImageLoaderAdapter(castAdapter, mCache, new int[]{R.id.thumb}, (int)(320 * scale), (int)(200 * scale)));
+        // fill it up!
+        data.addAll(data);
+        data.addAll(data);
 
+        final ListAdapter bigAdapter = new SimpleThumbnailAdapter(this, data, R.layout.thumbnail_item, new String[]{"thumb"}, new int[]{R.id.thumb}, new int[]{R.id.thumb});
 
-        final ListAdapter castAdapterSmall = new SimpleThumbnailCursorAdapter(this,
-        		R.layout.small_thumbnail_item,
-        		managedQuery(casts, new String[] {BaseColumns._ID, "thumbnail_uri"}, null, null, null),
-        		new String[]{"thumbnail_uri"},
-        		new int[]{R.id.thumb},
-        		new int[]{R.id.thumb}, 0);
+        setListAdapter(new ImageLoaderAdapter(this, bigAdapter, mCache, new int[]{R.id.thumb}, 320, 200, ImageLoaderAdapter.UNIT_DIP));
 
-        gallery.setAdapter(new ImageLoaderAdapter(castAdapterSmall, mCache, new int[]{R.id.thumb}, (int)(160 * scale), (int)(100 * scale)));
+        final ListAdapter smallAdapter = new SimpleThumbnailAdapter(this, data, R.layout.small_thumbnail_item, new String[]{"thumb"}, new int[]{R.id.thumb}, new int[]{R.id.thumb});
+
+        gallery.setAdapter(new ImageLoaderAdapter(this, smallAdapter, mCache, new int[]{R.id.thumb}, 160, 100, ImageLoaderAdapter.UNIT_DIP));
     }
 
     @Override
@@ -82,5 +94,14 @@ public class InteractiveDemo extends ListActivity {
     	super.onCreateOptionsMenu(menu);
     	getMenuInflater().inflate(R.menu.main_menu, menu);
     	return true;
+    }
+
+    private HashMap<String, String> addItem(String title, String image){
+    	final HashMap<String, String> m = new HashMap<String, String>();
+
+    	m.put("title", title);
+    	m.put("thumb", image);
+
+    	return m;
     }
 }
