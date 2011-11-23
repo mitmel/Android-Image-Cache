@@ -16,11 +16,12 @@ package edu.mit.mobile.android.imagecache;
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
+import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.util.HashMap;
 
 import android.content.Context;
-import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.util.Log;
 import android.view.View;
@@ -115,9 +116,16 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 			final Uri tag = (Uri) iv.getTag();
 			if (tag != null){
 				final long imageID = mCache.getNewID();
-				final Bitmap bmp = mCache.loadImage(imageID, tag, mWidth, mHeight);
-				if (bmp != null){
-					iv.setImageBitmap(bmp);
+				// attempt to bypass all the loading machinery to get the image loaded as quickly
+				// as possible
+				Drawable d = null;
+				try {
+					d = mCache.loadImage(imageID, tag, mWidth, mHeight);
+				} catch (final IOException e) {
+					e.printStackTrace();
+				}
+				if (d != null){
+					iv.setImageDrawable(d);
 				}else{
 					if (ImageCache.DEBUG) {
 						Log.d(TAG, "scheduling load with ID: "+ imageID+"; URI;"+ tag);
@@ -130,7 +138,7 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 	}
 
 	@Override
-	public void onImageLoaded(long id, Uri imageUri, Bitmap image) {
+	public void onImageLoaded(long id, Uri imageUri, Drawable image) {
 		final SoftReference<ImageView> ivRef = mImageViewsToLoad.get(id);
 		if (ivRef == null){
 			return;
@@ -144,7 +152,7 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 			Log.d(TAG, "loading ID "+id + " with an image");
 		}
 		if (imageUri.equals(iv.getTag())) {
-			iv.setImageBitmap(image);
+			iv.setImageDrawable(image);
 		}
 		mImageViewsToLoad.remove(id);
 	}

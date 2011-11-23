@@ -102,18 +102,12 @@ public abstract class DiskCache<K, V> {
 	 * @param key The key to find the value.
 	 * @param value the data to be written to disk.
 	 */
-	public void put(K key, V value){
+	public void put(K key, V value) throws IOException, FileNotFoundException {
 		final File saveHere = getFile(key);
 
-		try {
-			final OutputStream os = new FileOutputStream(saveHere);
-			toDisk(key, value, os);
-			os.close();
-		} catch (final FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (final IOException e) {
-			e.printStackTrace();
-		}
+		final OutputStream os = new FileOutputStream(saveHere);
+		toDisk(key, value, os);
+		os.close();
 	}
 
 	/**
@@ -122,28 +116,17 @@ public abstract class DiskCache<K, V> {
 	 * @param key
 	 * @return The value for key or null if the key doesn't map to any existing entries.
 	 */
-	public V get(K key){
+	public V get(K key) throws IOException {
 		final File readFrom = getFile(key);
 
 		if (!readFrom.exists()){
 			return null;
 		}
 
-		try {
-			final InputStream is = new FileInputStream(readFrom);
-			final V out = fromDisk(key, is);
-			is.close();
-			return out;
-
-		} catch (final FileNotFoundException e) {
-			e.printStackTrace();
-			return null;
-		} catch (final IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		}
-		// XXX better exception handling
+		final InputStream is = new FileInputStream(readFrom);
+		final V out = fromDisk(key, is);
+		is.close();
+		return out;
 	}
 
 	/**

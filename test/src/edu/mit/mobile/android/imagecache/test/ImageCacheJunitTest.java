@@ -25,6 +25,7 @@ import java.io.InputStream;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.test.InstrumentationTestCase;
 import android.util.Log;
@@ -52,7 +53,7 @@ public class ImageCacheJunitTest extends InstrumentationTestCase implements OnIm
 		assertEquals(0, imc.getCacheSize());
 	}
 
-	public void testGetPut(){
+	public void testGetPut() throws IOException {
 		final Context contextInst = getInstrumentation().getContext();
 		testClear();
 
@@ -144,7 +145,7 @@ public class ImageCacheJunitTest extends InstrumentationTestCase implements OnIm
 
 		assertNotNull(fileUri);
 
-		final Bitmap gotBmp = imc.loadImage(0, fileUri, 100, 100);
+		final Drawable gotBmp = imc.loadImage(0, fileUri, 100, 100);
 
 		if (gotBmp == null){
 			Log.d(TAG, "image was null, so waiting for it to load");
@@ -183,9 +184,9 @@ public class ImageCacheJunitTest extends InstrumentationTestCase implements OnIm
 */
 
 	private long gotID = -1;
-	private Bitmap gotImage;
+	private Drawable gotImage;
 
-	private Bitmap waitForImage(long id){
+	private Drawable waitForImage(long id){
 		try {
 			Log.d(TAG, "waiting for image");
 			wait(5000);
@@ -197,13 +198,13 @@ public class ImageCacheJunitTest extends InstrumentationTestCase implements OnIm
 		Log.d(TAG, "WaitForImage notified");
 
 		gotID = -1;
-		final Bitmap retval = gotImage;
+		final Drawable retval = gotImage;
 		gotImage = null;
 		return retval;
 	}
 
 	@Override
-	public void onImageLoaded(long id, Uri imageUri, Bitmap image) {
+	public void onImageLoaded(long id, Uri imageUri, Drawable image) {
 		Log.d(TAG, "onImageLoaded");
 //		try {
 //			wait();
