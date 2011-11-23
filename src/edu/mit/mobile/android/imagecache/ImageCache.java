@@ -642,7 +642,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		final int origHeight = bmap.getHeight();
 		final float scaleWidth = (float) height / origWidth;
 		final float scaleHeight = (float) width / origHeight;
-		final float scale = Math.min(scaleWidth, scaleHeight);
+		final float scale = Math.max(scaleWidth, scaleHeight);
 
 		// prevent upscaling, as the drawable will happily take care of this for
 		// us.
