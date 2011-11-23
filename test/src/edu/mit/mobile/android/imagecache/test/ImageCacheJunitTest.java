@@ -22,17 +22,18 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.http.client.ClientProtocolException;
+
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.test.InstrumentationTestCase;
-import android.util.Log;
 import edu.mit.mobile.android.imagecache.ImageCache;
-import edu.mit.mobile.android.imagecache.ImageCache.OnImageLoadListener;
+import edu.mit.mobile.android.imagecache.ImageCacheException;
 
-public class ImageCacheJunitTest extends InstrumentationTestCase implements OnImageLoadListener {
+public class ImageCacheJunitTest extends InstrumentationTestCase {
 	private static final String TAG = ImageCacheJunitTest.class.getSimpleName();
 
 	private ImageCache imc;
@@ -97,15 +98,15 @@ public class ImageCacheJunitTest extends InstrumentationTestCase implements OnIm
 		testClear();
 	}
 
-	private void assertBitmapSize(int expectedWidth, int expectedHeight, Bitmap actual){
-		assertEquals(expectedWidth, actual.getWidth());
-		assertEquals(expectedHeight, actual.getHeight());
+	private void assertBitmapMaxSize(int maxExpectedWidth, int maxExpectedHeight, Drawable actual){
+		assertTrue(maxExpectedWidth >= actual.getIntrinsicWidth());
+		assertTrue(maxExpectedHeight >= actual.getIntrinsicHeight());
 
 	}
 
-	private void assertBitmapMaxSize(int maxExpectedWidth, int maxExpectedHeight, Bitmap actual){
-		assertTrue(maxExpectedWidth >= actual.getWidth());
-		assertTrue(maxExpectedHeight >= actual.getHeight());
+	private void assertBitmapMinSize(int minExpectedWidth, int minExpectedHeight, Drawable actual){
+		assertTrue(minExpectedWidth <= actual.getIntrinsicWidth());
+		assertTrue(minExpectedHeight <= actual.getIntrinsicHeight());
 
 	}
 
@@ -114,7 +115,9 @@ public class ImageCacheJunitTest extends InstrumentationTestCase implements OnIm
 		assertEquals(expected.getWidth(), actual.getWidth());
 	}
 
-	public void testLocalFileLoad() throws IOException {
+	static final int LOCAL_SCALE_SIZE = 100;
+
+	public void testLocalFileLoad() throws IOException, ImageCacheException {
 		testClear();
 
 		final String testfile = "logo_locast.png";
@@ -141,84 +144,56 @@ public class ImageCacheJunitTest extends InstrumentationTestCase implements OnIm
 		final File outFile = context.getFileStreamPath(testfile);
 
 		final Uri fileUri = Uri.fromFile(outFile);
-		imc.registerOnImageLoadListener(this);
 
 		assertNotNull(fileUri);
 
-		final Drawable gotBmp = imc.loadImage(0, fileUri, 100, 100);
+		final Drawable img = imc.getImage(fileUri, LOCAL_SCALE_SIZE, LOCAL_SCALE_SIZE);
 
-		if (gotBmp == null){
-			Log.d(TAG, "image was null, so waiting for it to load");
-			//gotBmp = waitForImage(0);
-		}
+		assertNotNull(img);
 
-//		assertNotNull(gotBmp);
+		// the thumbnails produced by this aren't precisely the size we request, due to efficiencies
+		// in decoding the image.
+		assertBitmapMaxSize(LOCAL_SCALE_SIZE*2, LOCAL_SCALE_SIZE*2, img);
 
-	//	assertBitmapMaxSize(100, 100, gotBmp);
+		assertBitmapMinSize(LOCAL_SCALE_SIZE/2, LOCAL_SCALE_SIZE/2, img);
 
 	}
 
+	private final int NET_SCALE_SIZE = 100;
 
-/*
-	public void testNetworkLoad(){
+	private void testNetworkLoad(Uri uri) throws IOException, ImageCacheException{
+
+
+		// ensure we don't have it in the cache
+		final String origKey = imc.getKey(uri);
+		assertNull(imc.getDrawable(origKey));
+
+		final String scaledKey = imc.getKey(uri, NET_SCALE_SIZE, NET_SCALE_SIZE);
+		assertNull(imc.getDrawable(scaledKey));
+
+		final Drawable img = imc.getImage(uri, NET_SCALE_SIZE, NET_SCALE_SIZE);
+
+		assertNotNull(img);
+
+		assertBitmapMaxSize(NET_SCALE_SIZE*2, NET_SCALE_SIZE*2, img);
+
+		assertBitmapMinSize(NET_SCALE_SIZE/2, NET_SCALE_SIZE/2, img);
+
+		// ensure that it's stored in the disk cache
+		assertNotNull(imc.get(origKey));
+		assertNotNull(imc.get(scaledKey));
+
+	}
+
+	public void testNetworkLoad() throws ClientProtocolException, IOException, ImageCacheException {
 		testClear();
 
-		final long id = 31337;
-
-		final Bitmap bmp = imc.loadImage(id, Uri.parse("http://locast.mit.edu/images/logo_start_locast1.png"), 800, 800);
-
-		assertNull(bmp); // we shouldn't have it already in the cache
-
-		imc.registerOnImageLoadListener(new OnImageLoadListener() {
-
-			@Override
-			public void onImageLoaded(long id, Uri imageUri, Bitmap image) {
-				// TODO Auto-generated method stub
-
-			}
-		});
-
-
-
-	}
-*/
-
-	private long gotID = -1;
-	private Drawable gotImage;
-
-	private Drawable waitForImage(long id){
-		try {
-			Log.d(TAG, "waiting for image");
-			wait(5000);
-		} catch (final InterruptedException e) {
-			// ok!
-		}
-		Log.d(TAG, "waitForImage done waiting");
-		notifyAll();
-		Log.d(TAG, "WaitForImage notified");
-
-		gotID = -1;
-		final Drawable retval = gotImage;
-		gotImage = null;
-		return retval;
+		testNetworkLoad(Uri.parse("http://locast.mit.edu/images/logo_start_locast1.png"));
 	}
 
-	@Override
-	public void onImageLoaded(long id, Uri imageUri, Drawable image) {
-		Log.d(TAG, "onImageLoaded");
-//		try {
-//			wait();
-//		} catch (final InterruptedException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-		Log.d(TAG, "onImageLoaded done waiting");
+	public void testNetworkLoadLarge() throws ClientProtocolException, IOException, ImageCacheException {
+		testClear();
 
-		gotImage = image;
-		gotID = id;
-
-
-//		notifyAll();
-		Log.d(TAG, "onImageLoaded notified");
+		testNetworkLoad(Uri.parse("http://mobile-server.mit.edu/~stevep/large_logo.png"));
 	}
 }

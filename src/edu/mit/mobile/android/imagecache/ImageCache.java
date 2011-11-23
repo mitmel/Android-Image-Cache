@@ -308,10 +308,6 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 				return img;
 			}
 		}
-		final Bitmap b = get(key);
-		if (b != null){
-			return new BitmapDrawable(b);
-		}
 
 		return null;
 	}
@@ -365,13 +361,13 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 							width, height);
 				}
 			}
+			put(scaledKey, bmp);
 		}
 		if (bmp == null) {
 			throw new ImageCacheException("got null bitmap from request to scale");
 
 		}
 		d = new BitmapDrawable(mRes, bmp);
-		put(scaledKey, bmp);
 		putDrawable(scaledKey, d);
 
 		return d;
@@ -541,16 +537,15 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		// decode image size
 		final BitmapFactory.Options o = new BitmapFactory.Options();
 		o.inJustDecodeBounds = true;
-		final FileInputStream fis = new FileInputStream(localFile);
 
-		BitmapFactory.decodeStream(fis, null, o);
+		BitmapFactory.decodeStream(new FileInputStream(localFile), null, o);
 
 		// Find the correct scale value. It should be the power of 2.
-		final int REQUIRED_SIZE = width;
+		//final int REQUIRED_WIDTH = width, REQUIRED_HEIGHT = height;
 		int width_tmp = o.outWidth, height_tmp = o.outHeight;
 		int scale = 1;
 		while (true) {
-			if (width_tmp / 2 < REQUIRED_SIZE || height_tmp / 2 < REQUIRED_SIZE) {
+			if (width_tmp / 2 <= width || height_tmp / 2 <= height) {
 				break;
 			}
 			width_tmp /= 2;
@@ -561,7 +556,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		// decode with inSampleSize
 		final BitmapFactory.Options o2 = new BitmapFactory.Options();
 		o2.inSampleSize = scale;
-		final Bitmap prescale = BitmapFactory.decodeStream(fis, null, o2);
+		final Bitmap prescale = BitmapFactory.decodeStream(new FileInputStream(localFile), null, o2);
 
 		if (prescale != null) {
 			bmp = scaleBitmapPreserveAspect(prescale, width, height);
