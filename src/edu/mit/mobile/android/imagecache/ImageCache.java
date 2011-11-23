@@ -570,7 +570,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 		return bmp;
 	}
-	private static final boolean USE_APACHE_NC = false;
+	private static final boolean USE_APACHE_NC = true;
 
 	/**
 	 * Blocking call to download an image.
