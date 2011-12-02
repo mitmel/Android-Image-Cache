@@ -111,6 +111,43 @@ public abstract class DiskCache<K, V> {
 	}
 
 	/**
+	 * Writes the contents of the InputStream straight to disk. It is the
+	 * caller's responsibility to ensure it's the same type as what would be
+	 * written with {@link #toDisk(Object, Object, OutputStream)}
+	 *
+	 * @param key
+	 * @param value
+	 * @throws IOException
+	 * @throws FileNotFoundException
+	 */
+	public void putRaw(K key, InputStream value) throws IOException, FileNotFoundException {
+		final File saveHere = getFile(key);
+
+		final OutputStream os = new FileOutputStream(saveHere);
+
+		inputStreamToOutputStream(value, os);
+		os.close();
+	}
+
+	/**
+	 * Reads from an inputstream, dumps to an outputstream
+	 * @param is
+	 * @param os
+	 * @throws IOException
+	 */
+	static public void inputStreamToOutputStream(InputStream is, OutputStream os) throws IOException {
+		final int bufsize = 8196 * 10;
+		final byte[] cbuf = new byte[bufsize];
+
+		for (int readBytes = is.read(cbuf, 0, bufsize);
+			readBytes > 0;
+			readBytes = is.read(cbuf, 0, bufsize)) {
+			os.write(cbuf, 0, readBytes);
+		}
+	}
+
+
+	/**
 	 * Reads the value from disk using {@link #fromDisk(Object, InputStream)}.
 	 *
 	 * @param key
@@ -127,6 +164,34 @@ public abstract class DiskCache<K, V> {
 		final V out = fromDisk(key, is);
 		is.close();
 		return out;
+	}
+
+	/**
+	 * Checks the disk cache for a given key.
+	 *
+	 * @param key
+	 * @return true if the disk cache contains the given key
+	 */
+	public boolean contains(K key) {
+		final File readFrom = getFile(key);
+
+		return readFrom.exists();
+	}
+
+	/**
+	 * Removes the item from the disk cache.
+	 *
+	 * @param key
+	 * @return true if the cached item has been removed or was already removed, false if it was not able to be removed.
+	 */
+	public boolean clear(K key){
+		final File readFrom = getFile(key);
+
+		if (!readFrom.exists()){
+			return true;
+		}
+
+		return readFrom.delete();
 	}
 
 	/**
@@ -192,10 +257,16 @@ public abstract class DiskCache<K, V> {
 	 */
 	public String hash(K key){
 		final byte[] ba;
-		synchronized (hash){
+		synchronized (hash) {
 			hash.update(key.toString().getBytes());
 			ba = hash.digest();
 		}
-		return new BigInteger(ba).toString(16);
+		final BigInteger bi = new BigInteger(1, ba);
+		final String result = bi.toString(16);
+		if (result.length() % 2 != 0) {
+			return "0" + result;
+		}
+		return result;
+
 	}
 }

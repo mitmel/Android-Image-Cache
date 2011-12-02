@@ -351,14 +351,13 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 						height);
 			} else {
 				final String sourceKey = getKey(uri);
-				Bitmap sourceBitmap = ImageCache.this.get(sourceKey);
-				if (sourceBitmap == null) {
-					sourceBitmap = downloadImage(uri);
-					ImageCache.this.put(sourceKey, sourceBitmap);
+
+				if (! contains(sourceKey)) {
+					downloadImage(sourceKey, uri);
 				}
-				if (sourceBitmap != null) {
-					bmp = scaleBitmapPreserveAspect(sourceBitmap,
-							width, height);
+				bmp = scaleLocalImage(getFile(sourceKey), width, height);
+				if (bmp == null){
+					clear(sourceKey);
 				}
 			}
 			put(scaledKey, bmp);
@@ -497,14 +496,15 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 	/**
 	 * Cancels all the asynchronous image loads.
+	 * Note: currently does not function properly.
+	 *
 	 */
 	public void cancelLoads() {
 		// TODO actually make it possible to cancel tasks
 	}
 
 	/**
-	 * Blocking call to scale a local file. Scales using
-	 * {@link #scaleBitmapPreserveAspect(Bitmap, int, int)}.
+	 * Blocking call to scale a local file. Scales using preserving aspect ratio
 	 *
 	 * @param localFile
 	 *            local image file to be scaled
@@ -523,7 +523,6 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 			Log.d(TAG, "scaleLocalImage(" + localFile + ", "+ width +", "+ height + ")");
 		}
 
-		Bitmap bmp;
 		if (!localFile.exists()) {
 			throw new IOException("local file does not exist: " + localFile);
 		}
@@ -558,22 +557,16 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		o2.inSampleSize = scale;
 		final Bitmap prescale = BitmapFactory.decodeStream(new FileInputStream(localFile), null, o2);
 
-		if (prescale != null) {
-			bmp = scaleBitmapPreserveAspect(prescale, width, height);
-			if (prescale != bmp) {
-				prescale.recycle();
-			}
-		} else {
+		if (prescale == null) {
 			Log.e(TAG, localFile + " could not be decoded");
-			bmp = null;
 		}
 
-		return bmp;
+		return prescale;
 	}
 	private static final boolean USE_APACHE_NC = true;
 
 	/**
-	 * Blocking call to download an image.
+	 * Blocking call to download an image. The image is placed directly into the disk cache at the given key.
 	 *
 	 * @param uri
 	 *            the location of the image
@@ -582,13 +575,12 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	 *             if the HTTP response code wasn't 200 or any other HTTP errors
 	 * @throws IOException
 	 */
-	private Bitmap downloadImage(Uri uri) throws ClientProtocolException,
+	private void downloadImage(String key, Uri uri) throws ClientProtocolException,
 			IOException {
 
 		if (DEBUG){
 			Log.d(TAG, "downloadImage("+uri+")");
 		}
-		Bitmap bmp;
 		if (USE_APACHE_NC){
 			final HttpGet get = new HttpGet(uri.toString());
 
@@ -603,16 +595,15 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 
 			try {
-				bmp = BitmapFactory.decodeStream(ent.getContent());
+				putRaw(key, ent.getContent());
 
 			} finally {
 				ent.consumeContent();
 			}
 		}else{
 			final URLConnection con = new URL(uri.toString()).openConnection();
-			bmp = BitmapFactory.decodeStream(con.getInputStream());
+			putRaw(key, con.getInputStream());
 		}
-		return bmp;
 	}
 
 	/**
@@ -623,7 +614,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	 *            The input bitmap to be scaled. If the image would be upscaled,
 	 *            this bitmap is returned without scaling.
 	 * @return an image that's scaled to be at most the given width/height.
+	 * @deprecated this shouldn't be used, as it uses memory unnecessarily
 	 */
+	@Deprecated
 	private static Bitmap scaleBitmapPreserveAspect(Bitmap bmap, int width, int height) {
 		if (bmap == null || height == 0 || width == 0) {
 			return null;
