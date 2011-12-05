@@ -53,6 +53,7 @@ public class SimpleThumbnailCursorAdapter extends SimpleCursorAdapter {
 	private final Context mContext;
 
 	private boolean mShowIndeterminate = false;
+	private int mExpectedCount = -1;
 
 	/**
 	 * All parameters are passed directly to {@link SimpleCursorAdapter}
@@ -86,7 +87,7 @@ public class SimpleThumbnailCursorAdapter extends SimpleCursorAdapter {
 				}
 			}
 
-			setIndeterminateLoading(c == null);
+			setIndeterminateLoading(c == null || isNotShowingExpectedCount(c));
 		}
 
 		final View v = LayoutInflater.from(context)
@@ -172,13 +173,22 @@ public class SimpleThumbnailCursorAdapter extends SimpleCursorAdapter {
 
 	@Override
 	public Cursor swapCursor(Cursor c) {
-		setIndeterminateLoading(c == null);
+		setIndeterminateLoading(c == null || isNotShowingExpectedCount(c));
 		return super.swapCursor(c);
 	}
 
 	@Override
 	public void changeCursor(Cursor cursor) {
 		super.changeCursor(cursor);
-		setIndeterminateLoading(cursor == null);
+		setIndeterminateLoading(cursor == null || isNotShowingExpectedCount(cursor));
+	}
+
+	private boolean isNotShowingExpectedCount(Cursor c){
+		return c != null && (mExpectedCount > -1 && (c.getCount() != mExpectedCount));
+	}
+
+	public void setExpectedCount(int expectedCount){
+		mExpectedCount  = expectedCount;
+		setIndeterminateLoading(mCursor == null || isNotShowingExpectedCount(mCursor));
 	}
 }
