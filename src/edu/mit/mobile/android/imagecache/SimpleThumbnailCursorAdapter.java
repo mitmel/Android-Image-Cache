@@ -191,4 +191,19 @@ public class SimpleThumbnailCursorAdapter extends SimpleCursorAdapter {
 		mExpectedCount  = expectedCount;
 		setIndeterminateLoading(mCursor == null || isNotShowingExpectedCount(mCursor));
 	}
+
+	@Override
+	public boolean areAllItemsEnabled() {
+		return false;
+	}
+
+	@Override
+	public boolean isEnabled(int position) {
+
+		if (mShowIndeterminate){
+			return false;
+		}else{
+			return super.isEnabled(position);
+		}
+	}
 }
