@@ -2,7 +2,21 @@ Image Cache
 ===========
 
 An image download-and-cacher that also knows how to efficiently generate
-thumbnails of various sizes.
+thumbnails of various sizes. 
+
+Features
+--------
+
+* Easily integrates into content-provider backed applications, providing an
+  Adapter that can read local and web URLs from a Cursor
+* Automatic generation and caching of multiple sizes of images based on one
+  downloaded asset
+* Provides a disk cache as well as a memory cache
+* Designed to work with your existing setup: no extending a custom Application
+  or Activity needed
+* Cursor Adapter Supports multiple image fields for each ImageView; skips
+  fields that are null or empty
+* Cursor Adapter has an automatic progress bar when loading the cursor
 
 License
 =======
