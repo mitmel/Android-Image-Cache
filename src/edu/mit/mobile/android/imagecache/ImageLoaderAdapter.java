@@ -1,6 +1,7 @@
 package edu.mit.mobile.android.imagecache;
+
 /*
- * Copyright (C) 2011 MIT Mobile Experience Lab
+ * Copyright (C) 2011-2012 MIT Mobile Experience Lab
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -32,9 +33,19 @@ import android.widget.ListAdapter;
 import com.commonsware.cwac.adapter.AdapterWrapper;
 
 /**
- * An adapter that wraps another adapter.
+ * <p>
+ * An adapter that wraps another adapter, loading images into ImageViews asynchronously.
+ * </p>
  *
- * @author steve
+ * <p>
+ * To use, pass in a ListAdapter that generates ImageViews in the layout hierarchy of getView().
+ * ImageViews are searched for using the IDs specified in imageViewIDs. When found,
+ * {@link ImageView#getTag()} is called and should return a {@link Uri} referencing a local or
+ * remote image. See {@link ImageCache#loadImage(long, Uri, int, int)} for details on the types of
+ * URIs and images supported.
+ * </p>
+ *
+ * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
  *
  */
 public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnImageLoadListener {
@@ -47,42 +58,44 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 
 	private final int mWidth, mHeight;
 
-	public static final int
-		UNIT_PX = 0,
-		UNIT_DIP = 1;
+	public static final int UNIT_PX = 0, UNIT_DIP = 1;
 
 	/**
 	 * @param context
 	 * @param wrapped
 	 * @param cache
 	 * @param imageViewIDs
-	 * @param width in the specified unit
-	 * @param height in the specified unit
-	 * @param unit one of UNIT_PX or UNIT_DIP
+	 *            a list of resource IDs matching the ImageViews that should be scanned and loaded.
+	 * @param width
+	 *            the maximum width, in the specified unit
+	 * @param height
+	 *            the maximum height, in the specified unit
+	 * @param unit
+	 *            one of UNIT_PX or UNIT_DIP
 	 */
-	public ImageLoaderAdapter(Context context, ListAdapter wrapped, ImageCache cache, int[] imageViewIDs, int width, int height, int unit) {
+	public ImageLoaderAdapter(Context context, ListAdapter wrapped, ImageCache cache,
+			int[] imageViewIDs, int width, int height, int unit) {
 		super(wrapped);
 
 		mImageViewIDs = imageViewIDs;
 		mCache = cache;
 		mCache.registerOnImageLoadListener(this);
 
+		switch (unit) {
+			case UNIT_PX:
+				mHeight = height;
+				mWidth = width;
+				break;
 
+			case UNIT_DIP: {
+				final float scale = context.getResources().getDisplayMetrics().density;
+				mHeight = (int) (height * scale);
+				mWidth = (int) (width * scale);
+			}
+				break;
 
-		switch (unit){
-		case UNIT_PX:
-			mHeight = height;
-			mWidth = width;
-			break;
-
-		case UNIT_DIP:{
-			final float scale = context.getResources().getDisplayMetrics().density;
-			mHeight = (int) (height * scale);
-			mWidth = (int) (width * scale);
-		}break;
-
-		default:
-			throw new IllegalArgumentException("invalid unit type");
+			default:
+				throw new IllegalArgumentException("invalid unit type");
 
 		}
 	}
@@ -91,15 +104,20 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 	 * @param wrapped
 	 * @param cache
 	 * @param imageViewIDs
-	 * @param width in pixels
-	 * @param height in pixels
+	 *            a list of resource IDs matching the ImageViews that should be scan
+	 * @param width
+	 *            the maximum width, in pixels
+	 * @param height
+	 *            the maximum height, in pixels
 	 */
-	public ImageLoaderAdapter(ListAdapter wrapped, ImageCache cache, int[] imageViewIDs, int width, int height) {
+	public ImageLoaderAdapter(ListAdapter wrapped, ImageCache cache, int[] imageViewIDs, int width,
+			int height) {
 		this(null, wrapped, cache, imageViewIDs, width, height, UNIT_PX);
 	}
 
 	@Override
 	protected void finalize() throws Throwable {
+		// TODO this should probably be in its own method, so it can be called in onPause / onResume
 		mCache.unregisterOnImageLoadListener(this);
 		super.finalize();
 	}
@@ -108,13 +126,13 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 	public View getView(int position, View convertView, ViewGroup parent) {
 		final View v = super.getView(position, convertView, parent);
 
-		for (final int id: mImageViewIDs){
+		for (final int id : mImageViewIDs) {
 			final ImageView iv = (ImageView) v.findViewById(id);
-			if (iv == null){
+			if (iv == null) {
 				continue;
 			}
 			final Uri tag = (Uri) iv.getTag();
-			if (tag != null){
+			if (tag != null) {
 				final long imageID = mCache.getNewID();
 				// attempt to bypass all the loading machinery to get the image loaded as quickly
 				// as possible
@@ -124,11 +142,11 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 				} catch (final IOException e) {
 					e.printStackTrace();
 				}
-				if (d != null){
+				if (d != null) {
 					iv.setImageDrawable(d);
-				}else{
+				} else {
 					if (ImageCache.DEBUG) {
-						Log.d(TAG, "scheduling load with ID: "+ imageID+"; URI;"+ tag);
+						Log.d(TAG, "scheduling load with ID: " + imageID + "; URI;" + tag);
 					}
 					mImageViewsToLoad.put(imageID, new SoftReference<ImageView>(iv));
 				}
@@ -140,16 +158,16 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 	@Override
 	public void onImageLoaded(long id, Uri imageUri, Drawable image) {
 		final SoftReference<ImageView> ivRef = mImageViewsToLoad.get(id);
-		if (ivRef == null){
+		if (ivRef == null) {
 			return;
 		}
 		final ImageView iv = ivRef.get();
-		if (iv == null){
+		if (iv == null) {
 			mImageViewsToLoad.remove(id);
 			return;
 		}
-		if (ImageCache.DEBUG){
-			Log.d(TAG, "loading ID "+id + " with an image");
+		if (ImageCache.DEBUG) {
+			Log.d(TAG, "loading ID " + id + " with an image");
 		}
 		if (imageUri.equals(iv.getTag())) {
 			iv.setImageDrawable(image);
