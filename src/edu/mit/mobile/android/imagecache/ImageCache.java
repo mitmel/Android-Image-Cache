@@ -608,44 +608,6 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	}
 
 	/**
-	 * Scale a bitmap so that it fits within the specified width and height,
-	 * preserving its aspect ratio.
-	 *
-	 * @param bmap
-	 *            The input bitmap to be scaled. If the image would be upscaled,
-	 *            this bitmap is returned without scaling.
-	 * @return an image that's scaled to be at most the given width/height.
-	 * @deprecated this shouldn't be used, as it uses memory unnecessarily
-	 */
-	@Deprecated
-	private static Bitmap scaleBitmapPreserveAspect(Bitmap bmap, int width, int height) {
-		if (bmap == null || height == 0 || width == 0) {
-			return null;
-		}
-
-		if (DEBUG){
-			Log.d(TAG, "scaleBitmapPreserveAspect("+bmap + ", "+ width + ", " + height + ")");
-		}
-
-		final int origWidth = bmap.getWidth();
-		final int origHeight = bmap.getHeight();
-		final float scaleWidth = (float) height / origWidth;
-		final float scaleHeight = (float) width / origHeight;
-		final float scale = Math.max(scaleWidth, scaleHeight);
-
-		// prevent upscaling, as the drawable will happily take care of this for
-		// us.
-		if (scale < 1) {
-			final Bitmap scaled = Bitmap
-					.createScaledBitmap(bmap, (int) (origWidth * scale),
-							(int) (origHeight * scale), true);
-			bmap = scaled;
-		}
-
-		return bmap;
-	}
-
-	/**
 	 * Implement this and register it using
 	 * {@link ImageCache#registerOnImageLoadListener(OnImageLoadListener)} to be
 	 * notified when asynchronous image loads have completed.
