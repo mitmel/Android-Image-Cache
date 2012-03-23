@@ -17,7 +17,6 @@ package edu.mit.mobile.android.imagecache;
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import android.content.Context;
@@ -25,6 +24,7 @@ import android.database.Cursor;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.v4.widget.SimpleCursorAdapter;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,7 +48,7 @@ public class SimpleThumbnailCursorAdapter extends SimpleCursorAdapter {
 	private final Drawable defaultImages[];
 	private final int[] mImageIDs;
 	// XXX HACK the alternate images system is sorta a hack.
-	private final HashMap<Integer, List<String>> mAlternateImages = new HashMap<Integer, List<String>>();
+	private final SparseArray<List<String>> mAlternateImages = new SparseArray<List<String>>();
 
 	private final Context mContext;
 
