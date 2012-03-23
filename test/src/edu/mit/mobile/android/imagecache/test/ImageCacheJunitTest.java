@@ -188,7 +188,7 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
 	public void testNetworkLoad() throws ClientProtocolException, IOException, ImageCacheException {
 		testClear();
 
-		testNetworkLoad(Uri.parse("http://locast.mit.edu/images/logo_start_locast1.png"));
+		testNetworkLoad(Uri.parse("http://mobile-server.mit.edu/~stevep/logo_start_locast1.png"));
 	}
 
 	public void testNetworkLoadLarge() throws ClientProtocolException, IOException, ImageCacheException {
