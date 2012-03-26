@@ -5,6 +5,6 @@
 	android:id="@+id/thumb"
 	android:layout_width="160dip"
 	android:layout_height="100dip"
-
+	android:contentDescription="@null"
 	android:scaleType="centerCrop" />
 

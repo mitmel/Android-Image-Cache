@@ -34,6 +34,7 @@ import edu.mit.mobile.android.imagecache.ImageCache;
 import edu.mit.mobile.android.imagecache.ImageCacheException;
 
 public class ImageCacheJunitTest extends InstrumentationTestCase {
+	@SuppressWarnings("unused")
 	private static final String TAG = ImageCacheJunitTest.class.getSimpleName();
 
 	private ImageCache imc;
