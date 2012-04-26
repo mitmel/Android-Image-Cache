@@ -25,6 +25,7 @@ import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -56,7 +57,9 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 	private final int[] mImageViewIDs;
 	private final ImageCache mCache;
 
-	private final int mWidth, mHeight;
+	private final int mDefaultWidth, mDefaultHeight;
+
+	private final SparseArray<ViewDimensionCache> mViewDimensionCache = new SparseArray<ImageLoaderAdapter.ViewDimensionCache>();
 
 	public static final int UNIT_PX = 0, UNIT_DIP = 1;
 
@@ -66,15 +69,17 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 	 * @param cache
 	 * @param imageViewIDs
 	 *            a list of resource IDs matching the ImageViews that should be scanned and loaded.
-	 * @param width
-	 *            the maximum width, in the specified unit
-	 * @param height
-	 *            the maximum height, in the specified unit
+	 * @param defaultWidth
+	 *            the default maximum width, in the specified unit. This size will be used if the
+	 *            size cannot be obtained from the view.
+	 * @param defaultHeight
+	 *            the default maximum height, in the specified unit. This size will be used if the
+	 *            size cannot be obtained from the view.
 	 * @param unit
 	 *            one of UNIT_PX or UNIT_DIP
 	 */
 	public ImageLoaderAdapter(Context context, ListAdapter wrapped, ImageCache cache,
-			int[] imageViewIDs, int width, int height, int unit) {
+			int[] imageViewIDs, int defaultWidth, int defaultHeight, int unit) {
 		super(wrapped);
 
 		mImageViewIDs = imageViewIDs;
@@ -83,14 +88,14 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 
 		switch (unit) {
 			case UNIT_PX:
-				mHeight = height;
-				mWidth = width;
+				mDefaultHeight = defaultHeight;
+				mDefaultWidth = defaultWidth;
 				break;
 
 			case UNIT_DIP: {
 				final float scale = context.getResources().getDisplayMetrics().density;
-				mHeight = (int) (height * scale);
-				mWidth = (int) (width * scale);
+				mDefaultHeight = (int) (defaultHeight * scale);
+				mDefaultWidth = (int) (defaultWidth * scale);
 			}
 				break;
 
@@ -131,6 +136,18 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 			if (iv == null) {
 				continue;
 			}
+			ViewDimensionCache mViewDimension = mViewDimensionCache.get(id);
+			if (mViewDimension == null) {
+				final int w = iv.getMeasuredWidth();
+				final int h = iv.getMeasuredHeight();
+				if (w > 0 && h > 0) {
+					mViewDimension = new ViewDimensionCache();
+					mViewDimension.width = w;
+					mViewDimension.height = h;
+					mViewDimensionCache.put(id, mViewDimension);
+				}
+			}
+
 			final Uri tag = (Uri) iv.getTag();
 			if (tag != null) {
 				final long imageID = mCache.getNewID();
@@ -138,7 +155,13 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 				// as possible
 				Drawable d = null;
 				try {
-					d = mCache.loadImage(imageID, tag, mWidth, mHeight);
+					if (mViewDimension != null && mViewDimension.width > 0
+							&& mViewDimension.height > 0) {
+						d = mCache.loadImage(imageID, tag, mViewDimension.width,
+								mViewDimension.height);
+					} else {
+						d = mCache.loadImage(imageID, tag, mDefaultWidth, mDefaultHeight);
+					}
 				} catch (final IOException e) {
 					e.printStackTrace();
 				}
@@ -173,5 +196,10 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 			iv.setImageDrawable(image);
 		}
 		mImageViewsToLoad.remove(id);
+	}
+
+	private static class ViewDimensionCache {
+		int width;
+		int height;
 	}
 }
