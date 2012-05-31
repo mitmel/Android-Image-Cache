@@ -18,6 +18,15 @@ Features
   fields that are null or empty
 * cursor adapter has an automatic progress bar when loading the cursor
 
+Using
+-----
+
+Please see the test/ directory for both a simple example of using it as well as
+some unit tests. When running the application in test/ make sure to run it as
+an Android activity if you want to see the demo.
+
+Both the unit tests and the interactive test load some images from our lab's servers.
+
 License
 =======
 
