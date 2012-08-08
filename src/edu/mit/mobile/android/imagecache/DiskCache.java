@@ -102,7 +102,7 @@ public abstract class DiskCache<K, V> {
 	 * @param key The key to find the value.
 	 * @param value the data to be written to disk.
 	 */
-	public void put(K key, V value) throws IOException, FileNotFoundException {
+	public synchronized void put(K key, V value) throws IOException, FileNotFoundException {
 		final File saveHere = getFile(key);
 
 		final OutputStream os = new FileOutputStream(saveHere);
@@ -120,7 +120,8 @@ public abstract class DiskCache<K, V> {
 	 * @throws IOException
 	 * @throws FileNotFoundException
 	 */
-	public void putRaw(K key, InputStream value) throws IOException, FileNotFoundException {
+	public synchronized void putRaw(K key, InputStream value) throws IOException,
+			FileNotFoundException {
 		final File saveHere = getFile(key);
 
 		final OutputStream os = new FileOutputStream(saveHere);
@@ -153,7 +154,7 @@ public abstract class DiskCache<K, V> {
 	 * @param key
 	 * @return The value for key or null if the key doesn't map to any existing entries.
 	 */
-	public V get(K key) throws IOException {
+	public synchronized V get(K key) throws IOException {
 		final File readFrom = getFile(key);
 
 		if (!readFrom.exists()){
@@ -172,7 +173,7 @@ public abstract class DiskCache<K, V> {
 	 * @param key
 	 * @return true if the disk cache contains the given key
 	 */
-	public boolean contains(K key) {
+	public synchronized boolean contains(K key) {
 		final File readFrom = getFile(key);
 
 		return readFrom.exists();
@@ -184,7 +185,7 @@ public abstract class DiskCache<K, V> {
 	 * @param key
 	 * @return true if the cached item has been removed or was already removed, false if it was not able to be removed.
 	 */
-	public boolean clear(K key){
+	public synchronized boolean clear(K key) {
 		final File readFrom = getFile(key);
 
 		if (!readFrom.exists()){
@@ -201,7 +202,7 @@ public abstract class DiskCache<K, V> {
 	 *
 	 * @return true if the operation succeeded without error. It is possible that it will fail and the cache ends up being partially cleared.
 	 */
-	public boolean clear() {
+	public synchronized boolean clear() {
 		boolean success = true;
 
 		for (final File cacheFile : mCacheBase.listFiles(mCacheFileFilter)){
