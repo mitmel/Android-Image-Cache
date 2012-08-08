@@ -166,7 +166,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	protected Bitmap fromDisk(String key, InputStream in) {
 
 		if (DEBUG) {
-			Log.d(TAG, "disk cache hit");
+			Log.d(TAG, "disk cache hit for key " + key);
 		}
 		try {
 			final Bitmap image = BitmapFactory.decodeStream(in);
@@ -181,7 +181,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	@Override
 	protected void toDisk(String key, Bitmap image, OutputStream out) {
 		if (DEBUG) {
-			Log.d(TAG, "cache write for key " + key);
+			Log.d(TAG, "disk cache write for key " + key);
 		}
 		if (image != null) {
 			if (!image.compress(mCompressFormat, mQuality, out)) {
@@ -189,7 +189,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 						+ key);
 			}
 		} else {
-			Log.e(TAG, "attempting to write null image to cache");
+			Log.e(TAG, "Ignoring attempt to write null image to disk cache");
 		}
 	}
 
@@ -467,8 +467,15 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	 *         needs to be loaded asynchronously.
 	 */
 	public Drawable loadImage(long id, Uri image, int width, int height) throws IOException {
+		if (DEBUG) {
+			Log.d(TAG, "loadImage(" + id + ", " + image + ", " + width + ", " + height + ")");
+		}
 		final Drawable res = getDrawable(getKey(image, width, height));
 		if (res == null) {
+			if (DEBUG) {
+				Log.d(TAG,
+						"Image not found in memory cache. Scheduling load from network / disk...");
+			}
 			scheduleLoadImage(id, image, width, height);
 		}
 		return res;
@@ -493,7 +500,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 	 */
 	public void scheduleLoadImage(long id, Uri image, int width, int height) {
 		if (DEBUG){
-			Log.d(TAG, "executing new ImageLoadTask");
+			Log.d(TAG, "executing new ImageLoadTask in background...");
 		}
 		final ImageLoadTask imt = new ImageLoadTask();
 
@@ -570,6 +577,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 		if (prescale == null) {
 			Log.e(TAG, localFile + " could not be decoded");
+		} else if (DEBUG) {
+			Log.d(TAG, "Successfully completed scaling of " + localFile + " to " + width + "x"
+					+ height);
 		}
 
 		return prescale;
@@ -590,7 +600,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 			IOException {
 
 		if (DEBUG){
-			Log.d(TAG, "downloadImage("+uri+")");
+			Log.d(TAG, "downloadImage(" + key + ", " + uri + ")");
 		}
 		if (USE_APACHE_NC){
 			final HttpGet get = new HttpGet(uri.toString());
@@ -604,7 +614,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 			final HttpEntity ent = hr.getEntity();
 
-
+			// TODO I think this means that the source file must be a jpeg. fix this.
 			try {
 				putRaw(key, ent.getContent());
 
