@@ -27,7 +27,10 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashSet;
-import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -54,7 +57,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.widget.ImageView;
 
@@ -82,6 +86,14 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 	static final boolean DEBUG = false;
 
+	// whether to use Apache HttpClient or URL.openConnection()
+	private static final boolean USE_APACHE_NC = true;
+
+	// the below settings are copied from AsyncTask.java
+	private static final int CORE_POOL_SIZE = 5; // thread
+	private static final int MAXIMUM_POOL_SIZE = 128; // thread
+	private static final int KEEP_ALIVE_TIME = 1; // second
+
 	private final HashSet<OnImageLoadListener> mImageLoadListeners = new HashSet<ImageCache.OnImageLoadListener>();
 
 	public static final int DEFAULT_CACHE_SIZE = (24 /* MiB */* 1024 * 1024); // in bytes
@@ -92,12 +104,40 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 	private static ImageCache mInstance;
 
+	// this is a custom Executor, as we want to have the tasks loaded in FILO order. FILO works
+	// particularly well when scrolling with a ListView.
+	private final Executor mExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE,
+			KEEP_ALIVE_TIME, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
+
 	private final HttpClient hc;
 
 	private final CompressFormat mCompressFormat;
 	private final int mQuality;
 
 	private final Resources mRes;
+
+	private static final int MSG_IMAGE_LOADED = 100;
+
+	private static class ImageLoadHandler extends Handler{
+		private final ImageCache mCache;
+
+		public ImageLoadHandler(ImageCache cache) {
+			super();
+			mCache = cache;
+		}
+
+		@Override
+		public void handleMessage(Message msg) {
+			switch (msg.what) {
+				case MSG_IMAGE_LOADED:
+					mCache.notifyListeners((LoadResult) msg.obj);
+					break;
+			}
+		};
+	}
+
+	private final ImageLoadHandler mHandler = new ImageLoadHandler(this);
+
 
 	// TODO make it so this is customizable on the instance level.
 	/**
@@ -401,17 +441,31 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 				.toString();
 	}
 
-	private class ImageLoadTask extends AsyncTask<Object, Void, LoadResult> {
+	private class ImageLoadTask implements Runnable, Comparable<ImageLoadTask> {
+		private final long id;
+		private final Uri uri;
+		private final int width;
+		private final int height;
+		private final long when = System.nanoTime();
+
+		public ImageLoadTask(long id, Uri image, int width, int height) {
+			this.id = id;
+			this.uri = image;
+			this.width = width;
+			this.height = height;
+		}
 
 		@Override
-		protected LoadResult doInBackground(Object... params) {
-			final long id = (Long) params[0];
-			final Uri uri = (Uri) params[1];
-			final int width = (Integer) params[2];
-			final int height = (Integer) params[3];
+		public void run() {
+
+			if (DEBUG) {
+				Log.d(TAG, "ImageLoadTask.doInBackground(" + id + ", " + uri + ", " + width + ", "
+						+ height + ")");
+			}
 
 			try {
-				return new LoadResult(id, uri, getImage(uri, width, height));
+				final LoadResult result = new LoadResult(id, uri, getImage(uri, width, height));
+				mHandler.obtainMessage(MSG_IMAGE_LOADED, result).sendToTarget();
 
 				// TODO this exception came about, no idea why:
 				// java.lang.IllegalArgumentException: Parser may not be null
@@ -426,19 +480,11 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 			} catch (final ImageCacheException e) {
 				Log.e(TAG, e.getLocalizedMessage(), e);
 			}
-			return null;
-		};
+		}
 
 		@Override
-		protected void onPostExecute(LoadResult result) {
-			if (result == null) {
-				Log.w(TAG, "ImageLoadTask result was null");
-				return;
-			}
-
-			for (final OnImageLoadListener listener : mImageLoadListeners) {
-				listener.onImageLoaded(result.id, result.image, result.drawable);
-			}
+		public int compareTo(ImageLoadTask another) {
+			return Long.valueOf(another.when).compareTo(when);
 		};
 	}
 
@@ -502,14 +548,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 		if (DEBUG){
 			Log.d(TAG, "executing new ImageLoadTask in background...");
 		}
-		final ImageLoadTask imt = new ImageLoadTask();
+		final ImageLoadTask imt = new ImageLoadTask(id, image, width, height);
 
-		try {
-			imt.execute(id, image, width, height);
-		}catch (final RejectedExecutionException re){
-			Log.e(TAG, re.getLocalizedMessage(), re);
-			// oh well. At least we didn't crash!
-		}
+		mExecutor.execute(imt);
 	}
 
 	/**
@@ -584,7 +625,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 		return prescale;
 	}
-	private static final boolean USE_APACHE_NC = true;
+
 
 	/**
 	 * Blocking call to download an image. The image is placed directly into the disk cache at the given key.
@@ -616,14 +657,26 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
 			// TODO I think this means that the source file must be a jpeg. fix this.
 			try {
-				putRaw(key, ent.getContent());
 
+				putRaw(key, ent.getContent());
+				if (DEBUG) {
+					Log.d(TAG, "source file of " + uri + " saved to disk cache");
+				}
 			} finally {
 				ent.consumeContent();
 			}
 		}else{
 			final URLConnection con = new URL(uri.toString()).openConnection();
 			putRaw(key, con.getInputStream());
+			if (DEBUG) {
+				Log.d(TAG, "source file of " + uri + " saved to disk cache at key " + key);
+			}
+		}
+	}
+
+	private void notifyListeners(LoadResult result) {
+		for (final OnImageLoadListener listener : mImageLoadListeners) {
+			listener.onImageLoaded(result.id, result.image, result.drawable);
 		}
 	}
 
