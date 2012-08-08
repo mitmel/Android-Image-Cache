@@ -54,6 +54,7 @@ public class SimpleThumbnailCursorAdapter extends SimpleCursorAdapter {
 
 	private boolean mShowIndeterminate = false;
 	private int mExpectedCount = -1;
+	private View mIndeterminate;
 
 	/**
 	 * All parameters are passed directly to {@link SimpleCursorAdapter}
@@ -157,14 +158,25 @@ public class SimpleThumbnailCursorAdapter extends SimpleCursorAdapter {
 
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
+		final boolean convertViewIsProgressBar = convertView != null
+				&& convertView.getId() == R.id.progress;
+
 		if (mShowIndeterminate) {
-			return LayoutInflater.from(mContext).inflate(R.layout.list_loading,
-					parent, false);
+			if (convertViewIsProgressBar) {
+				return convertView;
+			}
+
+			if (mIndeterminate == null) {
+				mIndeterminate = LayoutInflater.from(mContext).inflate(R.layout.list_loading,
+						parent, false);
+			}
+
+			return mIndeterminate;
 
 		} else {
 			// ensure that we don't reuse the indeterminate progress bar as a
 			// real view
-			if (convertView != null && convertView.getId() == R.id.progress) {
+			if (convertViewIsProgressBar) {
 				convertView = null;
 			}
 			return super.getView(position, convertView, parent);
