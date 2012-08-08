@@ -44,6 +44,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.HttpParams;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
@@ -73,6 +74,9 @@ import android.widget.ImageView;
  * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
  *
  */
+// the below is not accurate, but there's a bug in Lint that thinks that we use CompressFormat#WEBP
+// (which we don't)
+@TargetApi(14)
 public class ImageCache extends DiskCache<String, Bitmap> {
 	private static final String TAG = ImageCache.class.getSimpleName();
 
