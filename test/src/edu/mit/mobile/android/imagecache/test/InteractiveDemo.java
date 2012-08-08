@@ -30,6 +30,7 @@ import edu.mit.mobile.android.imagecache.ImageCache;
 import edu.mit.mobile.android.imagecache.ImageLoaderAdapter;
 import edu.mit.mobile.android.imagecache.SimpleThumbnailAdapter;
 
+@SuppressWarnings("deprecation")
 public class InteractiveDemo extends ListActivity {
     /** Called when the activity is first created. */
 	private ImageCache mCache;
