@@ -34,16 +34,8 @@ public class InteractiveDemo extends ListActivity {
     /** Called when the activity is first created. */
 	private ImageCache mCache;
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
-
-        final Gallery gallery = (Gallery) findViewById(R.id.gallery);
-
-        mCache = ImageCache.getInstance(this);
-
-        final List<HashMap<String, String>> data = new ArrayList<HashMap<String,String>>();
+	private static final List<HashMap<String, String>> data = new ArrayList<HashMap<String, String>>();
+	static {
 
         data.add(addItem("locast tourism", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locast_tourism.jpg"));
         data.add(addItem("green home", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/gha_01.jpg"));
@@ -64,6 +56,17 @@ public class InteractiveDemo extends ListActivity {
         // fill it up!
         data.addAll(data);
         data.addAll(data);
+	}
+
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.main);
+
+		final Gallery gallery = (Gallery) findViewById(R.id.gallery);
+
+		mCache = ImageCache.getInstance(this);
+
 
         final ListAdapter bigAdapter = new SimpleThumbnailAdapter(this, data, R.layout.thumbnail_item, new String[]{"thumb"}, new int[]{R.id.thumb}, new int[]{R.id.thumb});
 
@@ -93,7 +96,7 @@ public class InteractiveDemo extends ListActivity {
     	return true;
     }
 
-    private HashMap<String, String> addItem(String title, String image){
+	private static HashMap<String, String> addItem(String title, String image) {
     	final HashMap<String, String> m = new HashMap<String, String>();
 
     	m.put("title", title);
