@@ -50,156 +50,156 @@ import com.commonsware.cwac.adapter.AdapterWrapper;
  *
  */
 public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnImageLoadListener {
-	private static final String TAG = ImageLoaderAdapter.class.getSimpleName();
+    private static final String TAG = ImageLoaderAdapter.class.getSimpleName();
 
-	private final HashMap<Long, SoftReference<ImageView>> mImageViewsToLoad = new HashMap<Long, SoftReference<ImageView>>();
+    private final HashMap<Long, SoftReference<ImageView>> mImageViewsToLoad = new HashMap<Long, SoftReference<ImageView>>();
 
-	private final int[] mImageViewIDs;
-	private final ImageCache mCache;
+    private final int[] mImageViewIDs;
+    private final ImageCache mCache;
 
-	private final int mDefaultWidth, mDefaultHeight;
+    private final int mDefaultWidth, mDefaultHeight;
 
-	private final SparseArray<ViewDimensionCache> mViewDimensionCache = new SparseArray<ImageLoaderAdapter.ViewDimensionCache>();
+    private final SparseArray<ViewDimensionCache> mViewDimensionCache = new SparseArray<ImageLoaderAdapter.ViewDimensionCache>();
 
-	public static final int UNIT_PX = 0, UNIT_DIP = 1;
+    public static final int UNIT_PX = 0, UNIT_DIP = 1;
 
-	/**
-	 * @param context
-	 * @param wrapped
-	 * @param cache
-	 * @param imageViewIDs
-	 *            a list of resource IDs matching the ImageViews that should be scanned and loaded.
-	 * @param defaultWidth
-	 *            the default maximum width, in the specified unit. This size will be used if the
-	 *            size cannot be obtained from the view.
-	 * @param defaultHeight
-	 *            the default maximum height, in the specified unit. This size will be used if the
-	 *            size cannot be obtained from the view.
-	 * @param unit
-	 *            one of UNIT_PX or UNIT_DIP
-	 */
-	public ImageLoaderAdapter(Context context, ListAdapter wrapped, ImageCache cache,
-			int[] imageViewIDs, int defaultWidth, int defaultHeight, int unit) {
-		super(wrapped);
+    /**
+     * @param context
+     * @param wrapped
+     * @param cache
+     * @param imageViewIDs
+     *            a list of resource IDs matching the ImageViews that should be scanned and loaded.
+     * @param defaultWidth
+     *            the default maximum width, in the specified unit. This size will be used if the
+     *            size cannot be obtained from the view.
+     * @param defaultHeight
+     *            the default maximum height, in the specified unit. This size will be used if the
+     *            size cannot be obtained from the view.
+     * @param unit
+     *            one of UNIT_PX or UNIT_DIP
+     */
+    public ImageLoaderAdapter(Context context, ListAdapter wrapped, ImageCache cache,
+            int[] imageViewIDs, int defaultWidth, int defaultHeight, int unit) {
+        super(wrapped);
 
-		mImageViewIDs = imageViewIDs;
-		mCache = cache;
-		mCache.registerOnImageLoadListener(this);
+        mImageViewIDs = imageViewIDs;
+        mCache = cache;
+        mCache.registerOnImageLoadListener(this);
 
-		switch (unit) {
-			case UNIT_PX:
-				mDefaultHeight = defaultHeight;
-				mDefaultWidth = defaultWidth;
-				break;
+        switch (unit) {
+            case UNIT_PX:
+                mDefaultHeight = defaultHeight;
+                mDefaultWidth = defaultWidth;
+                break;
 
-			case UNIT_DIP: {
-				final float scale = context.getResources().getDisplayMetrics().density;
-				mDefaultHeight = (int) (defaultHeight * scale);
-				mDefaultWidth = (int) (defaultWidth * scale);
-			}
-				break;
+            case UNIT_DIP: {
+                final float scale = context.getResources().getDisplayMetrics().density;
+                mDefaultHeight = (int) (defaultHeight * scale);
+                mDefaultWidth = (int) (defaultWidth * scale);
+            }
+                break;
 
-			default:
-				throw new IllegalArgumentException("invalid unit type");
+            default:
+                throw new IllegalArgumentException("invalid unit type");
 
-		}
-	}
+        }
+    }
 
-	/**
-	 * @param wrapped
-	 * @param cache
-	 * @param imageViewIDs
-	 *            a list of resource IDs matching the ImageViews that should be scan
-	 * @param width
-	 *            the maximum width, in pixels
-	 * @param height
-	 *            the maximum height, in pixels
-	 */
-	public ImageLoaderAdapter(ListAdapter wrapped, ImageCache cache, int[] imageViewIDs, int width,
-			int height) {
-		this(null, wrapped, cache, imageViewIDs, width, height, UNIT_PX);
-	}
+    /**
+     * @param wrapped
+     * @param cache
+     * @param imageViewIDs
+     *            a list of resource IDs matching the ImageViews that should be scan
+     * @param width
+     *            the maximum width, in pixels
+     * @param height
+     *            the maximum height, in pixels
+     */
+    public ImageLoaderAdapter(ListAdapter wrapped, ImageCache cache, int[] imageViewIDs, int width,
+            int height) {
+        this(null, wrapped, cache, imageViewIDs, width, height, UNIT_PX);
+    }
 
-	@Override
-	protected void finalize() throws Throwable {
-		// TODO this should probably be in its own method, so it can be called in onPause / onResume
-		mCache.unregisterOnImageLoadListener(this);
-		super.finalize();
-	}
+    @Override
+    protected void finalize() throws Throwable {
+        // TODO this should probably be in its own method, so it can be called in onPause / onResume
+        mCache.unregisterOnImageLoadListener(this);
+        super.finalize();
+    }
 
-	@Override
-	public View getView(int position, View convertView, ViewGroup parent) {
-		final View v = super.getView(position, convertView, parent);
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        final View v = super.getView(position, convertView, parent);
 
-		for (final int id : mImageViewIDs) {
-			final ImageView iv = (ImageView) v.findViewById(id);
-			if (iv == null) {
-				continue;
-			}
-			ViewDimensionCache mViewDimension = mViewDimensionCache.get(id);
-			if (mViewDimension == null) {
-				final int w = iv.getMeasuredWidth();
-				final int h = iv.getMeasuredHeight();
-				if (w > 0 && h > 0) {
-					mViewDimension = new ViewDimensionCache();
-					mViewDimension.width = w;
-					mViewDimension.height = h;
-					mViewDimensionCache.put(id, mViewDimension);
-				}
-			}
+        for (final int id : mImageViewIDs) {
+            final ImageView iv = (ImageView) v.findViewById(id);
+            if (iv == null) {
+                continue;
+            }
+            ViewDimensionCache mViewDimension = mViewDimensionCache.get(id);
+            if (mViewDimension == null) {
+                final int w = iv.getMeasuredWidth();
+                final int h = iv.getMeasuredHeight();
+                if (w > 0 && h > 0) {
+                    mViewDimension = new ViewDimensionCache();
+                    mViewDimension.width = w;
+                    mViewDimension.height = h;
+                    mViewDimensionCache.put(id, mViewDimension);
+                }
+            }
 
-			final Uri tag = (Uri) iv.getTag();
-			if (tag != null) {
-				final long imageID = mCache.getNewID();
-				// attempt to bypass all the loading machinery to get the image loaded as quickly
-				// as possible
-				Drawable d = null;
-				try {
-					if (mViewDimension != null && mViewDimension.width > 0
-							&& mViewDimension.height > 0) {
-						d = mCache.loadImage(imageID, tag, mViewDimension.width,
-								mViewDimension.height);
-					} else {
-						d = mCache.loadImage(imageID, tag, mDefaultWidth, mDefaultHeight);
-					}
-				} catch (final IOException e) {
-					e.printStackTrace();
-				}
-				if (d != null) {
-					iv.setImageDrawable(d);
-				} else {
-					if (ImageCache.DEBUG) {
-						Log.d(TAG, "scheduling load with ID: " + imageID + "; URI;" + tag);
-					}
-					mImageViewsToLoad.put(imageID, new SoftReference<ImageView>(iv));
-				}
-			}
-		}
-		return v;
-	}
+            final Uri tag = (Uri) iv.getTag();
+            if (tag != null) {
+                final long imageID = mCache.getNewID();
+                // attempt to bypass all the loading machinery to get the image loaded as quickly
+                // as possible
+                Drawable d = null;
+                try {
+                    if (mViewDimension != null && mViewDimension.width > 0
+                            && mViewDimension.height > 0) {
+                        d = mCache.loadImage(imageID, tag, mViewDimension.width,
+                                mViewDimension.height);
+                    } else {
+                        d = mCache.loadImage(imageID, tag, mDefaultWidth, mDefaultHeight);
+                    }
+                } catch (final IOException e) {
+                    e.printStackTrace();
+                }
+                if (d != null) {
+                    iv.setImageDrawable(d);
+                } else {
+                    if (ImageCache.DEBUG) {
+                        Log.d(TAG, "scheduling load with ID: " + imageID + "; URI;" + tag);
+                    }
+                    mImageViewsToLoad.put(imageID, new SoftReference<ImageView>(iv));
+                }
+            }
+        }
+        return v;
+    }
 
-	@Override
-	public void onImageLoaded(long id, Uri imageUri, Drawable image) {
-		final SoftReference<ImageView> ivRef = mImageViewsToLoad.get(id);
-		if (ivRef == null) {
-			return;
-		}
-		final ImageView iv = ivRef.get();
-		if (iv == null) {
-			mImageViewsToLoad.remove(id);
-			return;
-		}
-		if (ImageCache.DEBUG) {
-			Log.d(TAG, "loading ID " + id + " with an image");
-		}
-		if (imageUri.equals(iv.getTag())) {
-			iv.setImageDrawable(image);
-		}
-		mImageViewsToLoad.remove(id);
-	}
+    @Override
+    public void onImageLoaded(long id, Uri imageUri, Drawable image) {
+        final SoftReference<ImageView> ivRef = mImageViewsToLoad.get(id);
+        if (ivRef == null) {
+            return;
+        }
+        final ImageView iv = ivRef.get();
+        if (iv == null) {
+            mImageViewsToLoad.remove(id);
+            return;
+        }
+        if (ImageCache.DEBUG) {
+            Log.d(TAG, "loading ID " + id + " with an image");
+        }
+        if (imageUri.equals(iv.getTag())) {
+            iv.setImageDrawable(image);
+        }
+        mImageViewsToLoad.remove(id);
+    }
 
-	private static class ViewDimensionCache {
-		int width;
-		int height;
-	}
+    private static class ViewDimensionCache {
+        int width;
+        int height;
+    }
 }

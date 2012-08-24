@@ -46,177 +46,177 @@ import android.widget.ImageView;
  */
 public class SimpleThumbnailCursorAdapter extends SimpleCursorAdapter {
 
-	private final Drawable defaultImages[];
-	private final int[] mImageIDs;
-	// XXX HACK the alternate images system is sorta a hack.
-	private final SparseArray<List<String>> mAlternateImages = new SparseArray<List<String>>();
+    private final Drawable defaultImages[];
+    private final int[] mImageIDs;
+    // XXX HACK the alternate images system is sorta a hack.
+    private final SparseArray<List<String>> mAlternateImages = new SparseArray<List<String>>();
 
-	private final Context mContext;
+    private final Context mContext;
 
-	private boolean mShowIndeterminate = false;
-	private int mExpectedCount = -1;
-	private View mIndeterminate;
+    private boolean mShowIndeterminate = false;
+    private int mExpectedCount = -1;
+    private View mIndeterminate;
 
-	/**
-	 * All parameters are passed directly to {@link SimpleCursorAdapter}
-	 * {@link #SimpleThumbnailCursorAdapter(Context, int, Cursor, String[], int[], int[], int)}
-	 *
-	 * @param context
-	 * @param layout
-	 * @param c
-	 * @param from
-	 *            You can load alternate images by specifying multiple from IDs
-	 *            mapping to the same TO ID. This only works for images, as
-	 *            listed below.
-	 * @param to
-	 * @param imageIDs
-	 *            a list of ImageView IDs whose images will be loaded by this
-	 *            adapter.
-	 * @param flags
-	 */
-	public SimpleThumbnailCursorAdapter(Context context, int layout, Cursor c,
-			String[] from, int[] to, int[] imageIDs, int flags) {
-		super(context, layout, c, from, to, flags);
+    /**
+     * All parameters are passed directly to {@link SimpleCursorAdapter}
+     * {@link #SimpleThumbnailCursorAdapter(Context, int, Cursor, String[], int[], int[], int)}
+     *
+     * @param context
+     * @param layout
+     * @param c
+     * @param from
+     *            You can load alternate images by specifying multiple from IDs
+     *            mapping to the same TO ID. This only works for images, as
+     *            listed below.
+     * @param to
+     * @param imageIDs
+     *            a list of ImageView IDs whose images will be loaded by this
+     *            adapter.
+     * @param flags
+     */
+    public SimpleThumbnailCursorAdapter(Context context, int layout, Cursor c,
+            String[] from, int[] to, int[] imageIDs, int flags) {
+        super(context, layout, c, from, to, flags);
 
-		mContext = context;
+        mContext = context;
 
-		for (final int imageID : imageIDs) {
-			final List<String> alternates = new ArrayList<String>();
-			mAlternateImages.put(imageID, alternates);
-			for (int i = 0; i < to.length; i++) {
-				if (to[i] == imageID) {
-					alternates.add(from[i]);
-				}
-			}
+        for (final int imageID : imageIDs) {
+            final List<String> alternates = new ArrayList<String>();
+            mAlternateImages.put(imageID, alternates);
+            for (int i = 0; i < to.length; i++) {
+                if (to[i] == imageID) {
+                    alternates.add(from[i]);
+                }
+            }
 
-			setIndeterminateLoading(c == null || isNotShowingExpectedCount(c));
-		}
+            setIndeterminateLoading(c == null || isNotShowingExpectedCount(c));
+        }
 
-		final View v = LayoutInflater.from(context)
-				.inflate(layout, null, false);
-		defaultImages = new Drawable[imageIDs.length];
+        final View v = LayoutInflater.from(context)
+                .inflate(layout, null, false);
+        defaultImages = new Drawable[imageIDs.length];
 
-		mImageIDs = imageIDs;
+        mImageIDs = imageIDs;
 
-		for (int i = 0; i < mImageIDs.length; i++) {
-			final ImageView thumb = (ImageView) v.findViewById(imageIDs[i]);
-			defaultImages[i] = thumb.getDrawable();
-		}
-	}
+        for (int i = 0; i < mImageIDs.length; i++) {
+            final ImageView thumb = (ImageView) v.findViewById(imageIDs[i]);
+            defaultImages[i] = thumb.getDrawable();
+        }
+    }
 
-	@Override
-	public void setViewImage(ImageView v, String value) {
-		final int id = v.getId();
-		for (int i = 0; i < mImageIDs.length; i++) {
-			if (id == mImageIDs[i]) {
-				final List<String> alternates = mAlternateImages.get(id);
-				if (alternates != null && alternates.size() > 1) {
-					final Cursor c = getCursor();
-					for (final String alternate : alternates) {
-						final int idx = c.getColumnIndex(alternate);
-						if (c.isNull(idx)) {
-							continue;
-						} else {
-							// only set the first one that isn't null
-							setViewImageAndTag(v, c.getString(idx),
-									defaultImages[i]);
-							break;
-						}
-					}
-				} else {
-					setViewImageAndTag(v, value, defaultImages[i]);
-				}
-			}
-		}
-	}
+    @Override
+    public void setViewImage(ImageView v, String value) {
+        final int id = v.getId();
+        for (int i = 0; i < mImageIDs.length; i++) {
+            if (id == mImageIDs[i]) {
+                final List<String> alternates = mAlternateImages.get(id);
+                if (alternates != null && alternates.size() > 1) {
+                    final Cursor c = getCursor();
+                    for (final String alternate : alternates) {
+                        final int idx = c.getColumnIndex(alternate);
+                        if (c.isNull(idx)) {
+                            continue;
+                        } else {
+                            // only set the first one that isn't null
+                            setViewImageAndTag(v, c.getString(idx),
+                                    defaultImages[i]);
+                            break;
+                        }
+                    }
+                } else {
+                    setViewImageAndTag(v, value, defaultImages[i]);
+                }
+            }
+        }
+    }
 
-	private void setViewImageAndTag(ImageView v, String value,
-			Drawable defaultImage) {
-		v.setImageDrawable(defaultImage);
-		if (value != null && value.length() > 0) {
-			v.setTag(Uri.parse(value));
-		} else {
-			v.setTag(null);
-		}
-	}
+    private void setViewImageAndTag(ImageView v, String value,
+            Drawable defaultImage) {
+        v.setImageDrawable(defaultImage);
+        if (value != null && value.length() > 0) {
+            v.setTag(Uri.parse(value));
+        } else {
+            v.setTag(null);
+        }
+    }
 
-	private void setIndeterminateLoading(boolean isLoading) {
-		if (isLoading != mShowIndeterminate) {
-			mShowIndeterminate = isLoading;
-			notifyDataSetInvalidated();
-			notifyDataSetChanged();
-		}
-	}
+    private void setIndeterminateLoading(boolean isLoading) {
+        if (isLoading != mShowIndeterminate) {
+            mShowIndeterminate = isLoading;
+            notifyDataSetInvalidated();
+            notifyDataSetChanged();
+        }
+    }
 
-	@Override
-	public int getCount() {
-		if (mShowIndeterminate) {
-			return 1;
-		} else {
-			return super.getCount();
-		}
-	}
+    @Override
+    public int getCount() {
+        if (mShowIndeterminate) {
+            return 1;
+        } else {
+            return super.getCount();
+        }
+    }
 
-	@Override
-	public View getView(int position, View convertView, ViewGroup parent) {
-		final boolean convertViewIsProgressBar = convertView != null
-				&& convertView.getId() == R.id.progress;
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        final boolean convertViewIsProgressBar = convertView != null
+                && convertView.getId() == R.id.progress;
 
-		if (mShowIndeterminate) {
-			if (convertViewIsProgressBar) {
-				return convertView;
-			}
+        if (mShowIndeterminate) {
+            if (convertViewIsProgressBar) {
+                return convertView;
+            }
 
-			if (mIndeterminate == null) {
-				mIndeterminate = LayoutInflater.from(mContext).inflate(R.layout.list_loading,
-						parent, false);
-			}
+            if (mIndeterminate == null) {
+                mIndeterminate = LayoutInflater.from(mContext).inflate(R.layout.list_loading,
+                        parent, false);
+            }
 
-			return mIndeterminate;
+            return mIndeterminate;
 
-		} else {
-			// ensure that we don't reuse the indeterminate progress bar as a
-			// real view
-			if (convertViewIsProgressBar) {
-				convertView = null;
-			}
-			return super.getView(position, convertView, parent);
-		}
-	}
+        } else {
+            // ensure that we don't reuse the indeterminate progress bar as a
+            // real view
+            if (convertViewIsProgressBar) {
+                convertView = null;
+            }
+            return super.getView(position, convertView, parent);
+        }
+    }
 
-	@Override
-	public Cursor swapCursor(Cursor c) {
-		setIndeterminateLoading(c == null || isNotShowingExpectedCount(c));
-		return super.swapCursor(c);
-	}
+    @Override
+    public Cursor swapCursor(Cursor c) {
+        setIndeterminateLoading(c == null || isNotShowingExpectedCount(c));
+        return super.swapCursor(c);
+    }
 
-	@Override
-	public void changeCursor(Cursor cursor) {
-		super.changeCursor(cursor);
-		setIndeterminateLoading(cursor == null || isNotShowingExpectedCount(cursor));
-	}
+    @Override
+    public void changeCursor(Cursor cursor) {
+        super.changeCursor(cursor);
+        setIndeterminateLoading(cursor == null || isNotShowingExpectedCount(cursor));
+    }
 
-	private boolean isNotShowingExpectedCount(Cursor c){
-		return c != null && (mExpectedCount > -1 && (c.getCount() != mExpectedCount));
-	}
+    private boolean isNotShowingExpectedCount(Cursor c){
+        return c != null && (mExpectedCount > -1 && (c.getCount() != mExpectedCount));
+    }
 
-	public void setExpectedCount(int expectedCount){
-		mExpectedCount  = expectedCount;
-		setIndeterminateLoading(mCursor == null || isNotShowingExpectedCount(mCursor));
-	}
+    public void setExpectedCount(int expectedCount){
+        mExpectedCount  = expectedCount;
+        setIndeterminateLoading(mCursor == null || isNotShowingExpectedCount(mCursor));
+    }
 
-	@Override
-	public boolean areAllItemsEnabled() {
-		return false;
-	}
+    @Override
+    public boolean areAllItemsEnabled() {
+        return false;
+    }
 
-	@Override
-	public boolean isEnabled(int position) {
+    @Override
+    public boolean isEnabled(int position) {
 
-		if (mShowIndeterminate){
-			return false;
-		}else{
-			return super.isEnabled(position);
-		}
-	}
+        if (mShowIndeterminate){
+            return false;
+        }else{
+            return super.isEnabled(position);
+        }
+    }
 }

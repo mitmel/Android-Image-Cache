@@ -33,10 +33,10 @@ import edu.mit.mobile.android.imagecache.SimpleThumbnailAdapter;
 @SuppressWarnings("deprecation")
 public class InteractiveDemo extends ListActivity {
     /** Called when the activity is first created. */
-	private ImageCache mCache;
+    private ImageCache mCache;
 
-	private static final List<HashMap<String, String>> data = new ArrayList<HashMap<String, String>>();
-	static {
+    private static final List<HashMap<String, String>> data = new ArrayList<HashMap<String, String>>();
+    static {
 
         data.add(addItem("locast tourism", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locast_tourism.jpg"));
         data.add(addItem("green home", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/gha_01.jpg"));
@@ -57,16 +57,16 @@ public class InteractiveDemo extends ListActivity {
         // fill it up!
         data.addAll(data);
         data.addAll(data);
-	}
+    }
 
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.main);
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.main);
 
-		final Gallery gallery = (Gallery) findViewById(R.id.gallery);
+        final Gallery gallery = (Gallery) findViewById(R.id.gallery);
 
-		mCache = ImageCache.getInstance(this);
+        mCache = ImageCache.getInstance(this);
 
 
         final ListAdapter bigAdapter = new SimpleThumbnailAdapter(this, data, R.layout.thumbnail_item, new String[]{"thumb"}, new int[]{R.id.thumb}, new int[]{R.id.thumb});
@@ -80,29 +80,29 @@ public class InteractiveDemo extends ListActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-    	switch (item.getItemId()){
-    	case R.id.clear:
-    		mCache.clear();
-    		return true;
+        switch (item.getItemId()){
+        case R.id.clear:
+            mCache.clear();
+            return true;
 
-    		default:
-    			return super.onOptionsItemSelected(item);
-    	}
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-    	super.onCreateOptionsMenu(menu);
-    	getMenuInflater().inflate(R.menu.main_menu, menu);
-    	return true;
+        super.onCreateOptionsMenu(menu);
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
     }
 
-	private static HashMap<String, String> addItem(String title, String image) {
-    	final HashMap<String, String> m = new HashMap<String, String>();
+    private static HashMap<String, String> addItem(String title, String image) {
+        final HashMap<String, String> m = new HashMap<String, String>();
 
-    	m.put("title", title);
-    	m.put("thumb", image);
+        m.put("title", title);
+        m.put("thumb", image);
 
-    	return m;
+        return m;
     }
 }
