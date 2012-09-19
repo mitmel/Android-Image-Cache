@@ -26,8 +26,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.concurrent.Executor;
+import java.util.Map;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -106,8 +108,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
     // this is a custom Executor, as we want to have the tasks loaded in FILO order. FILO works
     // particularly well when scrolling with a ListView.
-    private final Executor mExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE,
+    private final ThreadPoolExecutor mExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE,
             KEEP_ALIVE_TIME, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
+    private final Map<Long, Runnable> jobs = Collections.synchronizedMap(new HashMap<Long, Runnable>());
 
     private final HttpClient hc;
 
@@ -485,7 +488,13 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
             try {
                 final LoadResult result = new LoadResult(id, uri, getImage(uri, width, height));
-                mHandler.obtainMessage(MSG_IMAGE_LOADED, result).sendToTarget();
+                synchronized (jobs) {
+                    if (jobs.containsKey(id)) {
+                        // Job still valid.
+                        jobs.remove(id);
+                        mHandler.obtainMessage(MSG_IMAGE_LOADED, result).sendToTarget();
+                    }
+                }
 
                 // TODO this exception came about, no idea why:
                 // java.lang.IllegalArgumentException: Parser may not be null
@@ -570,6 +579,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         }
         final ImageLoadTask imt = new ImageLoadTask(id, image, width, height);
 
+        jobs.put(id,imt);
         mExecutor.execute(imt);
     }
 
@@ -579,7 +589,18 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      *
      */
     public void cancelLoads() {
-        // TODO actually make it possible to cancel tasks
+        jobs.clear();
+        mExecutor.getQueue().clear();
+    }
+    
+    public void cancel(long id) {
+        synchronized (jobs) {
+            Runnable job = jobs.get(id);
+            if (job != null) {
+                jobs.remove(id);
+                mExecutor.remove(job);
+            }
+        }
     }
 
     /**
