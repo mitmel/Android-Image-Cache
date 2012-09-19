@@ -111,8 +111,8 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
     private final HttpClient hc;
 
-    private final CompressFormat mCompressFormat;
-    private final int mQuality;
+    private CompressFormat mCompressFormat;
+    private int mQuality;
 
     private final Resources mRes;
 
@@ -160,6 +160,26 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         mRes = context.getResources();
 
         mCompressFormat = format;
+        mQuality = quality;
+    }
+    
+    /**
+     * Sets the compression format for resized images.
+     * 
+     * @param format
+     */
+    public void setCompressFormat(CompressFormat format) {
+        mCompressFormat = format;
+    }
+    
+    /**
+     * Set the image quality. Hint to the compressor, 0-100. 0 meaning compress for small size, 
+     * 100 meaning compress for max quality. Some formats, like PNG which is lossless, will 
+     * ignore the quality setting
+     * 
+     * @param quality
+     */
+    public void setQuality(int quality) {
         mQuality = quality;
     }
 
