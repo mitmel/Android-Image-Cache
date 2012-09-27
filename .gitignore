@@ -3,3 +3,4 @@ gen/
 .project
 test/.project
 local.properties
+build.xml
