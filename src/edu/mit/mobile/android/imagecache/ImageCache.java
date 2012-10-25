@@ -41,6 +41,7 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.params.ClientPNames;
 import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
@@ -686,6 +687,8 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         }
         if (USE_APACHE_NC){
             final HttpGet get = new HttpGet(uri.toString());
+            HttpParams params = get.getParams();
+            params.setParameter(ClientPNames.HANDLE_REDIRECTS, true);
 
             final HttpResponse hr = hc.execute(get);
             final StatusLine hs = hr.getStatusLine();
