@@ -1,5 +1,6 @@
 bin/
 gen/
+.classpath
 .project
 test/.project
 local.properties
