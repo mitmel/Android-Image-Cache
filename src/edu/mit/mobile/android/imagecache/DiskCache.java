@@ -126,14 +126,32 @@ public abstract class DiskCache<K, V> {
      * @throws IOException
      * @throws FileNotFoundException
      */
-    public synchronized void putRaw(K key, InputStream value) throws IOException,
-            FileNotFoundException {
+    public void putRaw(K key, InputStream value) throws IOException, FileNotFoundException {
+
         final File saveHere = getFile(key);
 
-        final OutputStream os = new FileOutputStream(saveHere);
+        final File tempFile = new File(saveHere.getAbsolutePath() + ".temp");
 
-        inputStreamToOutputStream(value, os);
-        os.close();
+        boolean allGood = false;
+        try {
+            final OutputStream os = new FileOutputStream(tempFile);
+
+            inputStreamToOutputStream(value, os);
+            os.close();
+
+            synchronized (this) {
+                // overwrite
+                saveHere.delete();
+                tempFile.renameTo(saveHere);
+            }
+            allGood = true;
+        } finally {
+            // clean up on any exception
+            if (!allGood) {
+                saveHere.delete();
+                tempFile.delete();
+            }
+        }
     }
 
     /**

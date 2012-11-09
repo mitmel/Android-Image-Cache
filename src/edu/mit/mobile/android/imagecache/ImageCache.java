@@ -103,7 +103,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
     private DrawableMemCache<String> mMemCache = new DrawableMemCache<String>(DEFAULT_CACHE_SIZE);
 
-    private long mIDCounter = 0;
+    private Long mIDCounter = (long) 0;
 
     private static ImageCache mInstance;
 
@@ -222,8 +222,10 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      *
      * @return a new unique ID
      */
-    public synchronized long getNewID() {
-        return mIDCounter++;
+    public long getNewID() {
+        synchronized (mIDCounter) {
+            return mIDCounter++;
+        }
     }
 
     @Override
