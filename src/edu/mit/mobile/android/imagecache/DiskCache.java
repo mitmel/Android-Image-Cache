@@ -1,4 +1,5 @@
 package edu.mit.mobile.android.imagecache;
+
 /*
  * Copyright (C) 2011 MIT Mobile Experience Lab
  *
@@ -35,8 +36,10 @@ import android.util.Log;
  *
  * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
  *
- * @param <K> the key to store/retrieve the value
- * @param <V> the value that will be stored to disk
+ * @param <K>
+ *            the key to store/retrieve the value
+ * @param <V>
+ *            the value that will be stored to disk
  */
 // TODO add automatic cache cleanup so low disk conditions can be met
 public abstract class DiskCache<K, V> {
@@ -59,9 +62,12 @@ public abstract class DiskCache<K, V> {
     /**
      * Creates a new disk cache.
      *
-     * @param cacheBase The base directory within which all the cache files will be stored.
-     * @param cachePrefix If you want a prefix to the filenames, place one here. Otherwise, pass null.
-     * @param cacheSuffix A suffix to the cache filename. Null is also ok here.
+     * @param cacheBase
+     *            The base directory within which all the cache files will be stored.
+     * @param cachePrefix
+     *            If you want a prefix to the filenames, place one here. Otherwise, pass null.
+     * @param cacheSuffix
+     *            A suffix to the cache filename. Null is also ok here.
      */
     public DiskCache(File cacheBase, String cachePrefix, String cacheSuffix) {
         mCacheBase = cacheBase;
@@ -75,9 +81,9 @@ public abstract class DiskCache<K, V> {
             try {
                 hash = MessageDigest.getInstance("MD5");
             } catch (final NoSuchAlgorithmException e2) {
-            final RuntimeException re = new RuntimeException("No available hashing algorithm");
-            re.initCause(e2);
-            throw re;
+                final RuntimeException re = new RuntimeException("No available hashing algorithm");
+                re.initCause(e2);
+                throw re;
             }
         }
     }
@@ -88,19 +94,19 @@ public abstract class DiskCache<K, V> {
      * @param key
      * @return
      */
-    protected File getFile(K key){
-        return new File(mCacheBase,
-                (mCachePrefix != null ? mCachePrefix :"" )
-                + hash(key)
-                + (mCacheSuffix  != null ? mCacheSuffix : "")
-            );
+    protected File getFile(K key) {
+        return new File(mCacheBase, (mCachePrefix != null ? mCachePrefix : "") + hash(key)
+                + (mCacheSuffix != null ? mCacheSuffix : ""));
     }
 
     /**
-     * Writes the value stored in the cache to disk by calling {@link #toDisk(Object, Object, OutputStream)}.
+     * Writes the value stored in the cache to disk by calling
+     * {@link #toDisk(Object, Object, OutputStream)}.
      *
-     * @param key The key to find the value.
-     * @param value the data to be written to disk.
+     * @param key
+     *            The key to find the value.
+     * @param value
+     *            the data to be written to disk.
      */
     public synchronized void put(K key, V value) throws IOException, FileNotFoundException {
         final File saveHere = getFile(key);
@@ -111,9 +117,9 @@ public abstract class DiskCache<K, V> {
     }
 
     /**
-     * Writes the contents of the InputStream straight to disk. It is the
-     * caller's responsibility to ensure it's the same type as what would be
-     * written with {@link #toDisk(Object, Object, OutputStream)}
+     * Writes the contents of the InputStream straight to disk. It is the caller's responsibility to
+     * ensure it's the same type as what would be written with
+     * {@link #toDisk(Object, Object, OutputStream)}
      *
      * @param key
      * @param value
@@ -132,21 +138,21 @@ public abstract class DiskCache<K, V> {
 
     /**
      * Reads from an inputstream, dumps to an outputstream
+     *
      * @param is
      * @param os
      * @throws IOException
      */
-    static public void inputStreamToOutputStream(InputStream is, OutputStream os) throws IOException {
+    static public void inputStreamToOutputStream(InputStream is, OutputStream os)
+            throws IOException {
         final int bufsize = 8196 * 10;
         final byte[] cbuf = new byte[bufsize];
 
-        for (int readBytes = is.read(cbuf, 0, bufsize);
-            readBytes > 0;
-            readBytes = is.read(cbuf, 0, bufsize)) {
+        for (int readBytes = is.read(cbuf, 0, bufsize); readBytes > 0; readBytes = is.read(cbuf, 0,
+                bufsize)) {
             os.write(cbuf, 0, readBytes);
         }
     }
-
 
     /**
      * Reads the value from disk using {@link #fromDisk(Object, InputStream)}.
@@ -157,7 +163,7 @@ public abstract class DiskCache<K, V> {
     public synchronized V get(K key) throws IOException {
         final File readFrom = getFile(key);
 
-        if (!readFrom.exists()){
+        if (!readFrom.exists()) {
             return null;
         }
 
@@ -183,12 +189,13 @@ public abstract class DiskCache<K, V> {
      * Removes the item from the disk cache.
      *
      * @param key
-     * @return true if the cached item has been removed or was already removed, false if it was not able to be removed.
+     * @return true if the cached item has been removed or was already removed, false if it was not
+     *         able to be removed.
      */
     public synchronized boolean clear(K key) {
         final File readFrom = getFile(key);
 
-        if (!readFrom.exists()){
+        if (!readFrom.exists()) {
             return true;
         }
 
@@ -200,15 +207,16 @@ public abstract class DiskCache<K, V> {
      *
      * Note: this only clears files that match the given prefix/suffix.
      *
-     * @return true if the operation succeeded without error. It is possible that it will fail and the cache ends up being partially cleared.
+     * @return true if the operation succeeded without error. It is possible that it will fail and
+     *         the cache ends up being partially cleared.
      */
     public synchronized boolean clear() {
         boolean success = true;
 
-        for (final File cacheFile : mCacheBase.listFiles(mCacheFileFilter)){
-            if (!cacheFile.delete()){
+        for (final File cacheFile : mCacheBase.listFiles(mCacheFileFilter)) {
+            if (!cacheFile.delete()) {
                 // throw new IOException("cannot delete cache file");
-                Log.e(TAG, "error deleting "+ cacheFile);
+                Log.e(TAG, "error deleting " + cacheFile);
                 success = false;
             }
         }
@@ -218,7 +226,7 @@ public abstract class DiskCache<K, V> {
     /**
      * @return the size of the cache as it is on disk.
      */
-    public int getCacheSize(){
+    public int getCacheSize() {
         return mCacheBase.listFiles(mCacheFileFilter).length;
     }
 
@@ -229,12 +237,13 @@ public abstract class DiskCache<K, V> {
         public boolean accept(File pathname) {
             final String path = pathname.getName();
             return (mCachePrefix != null ? path.startsWith(mCachePrefix) : true)
-                && (mCacheSuffix != null ? path.endsWith(mCacheSuffix)   : true);
+                    && (mCacheSuffix != null ? path.endsWith(mCacheSuffix) : true);
         }
     };
 
     /**
-     * Implement this to do the actual disk writing. Do not close the OutputStream; it will be closed for you.
+     * Implement this to do the actual disk writing. Do not close the OutputStream; it will be
+     * closed for you.
      *
      * @param key
      * @param in
@@ -244,6 +253,7 @@ public abstract class DiskCache<K, V> {
 
     /**
      * Implement this to do the actual disk reading.
+     *
      * @param key
      * @param in
      * @return a new instance of {@link V} containing the contents of in.
@@ -251,12 +261,13 @@ public abstract class DiskCache<K, V> {
     protected abstract V fromDisk(K key, InputStream in);
 
     /**
-     * Using the key's {@link Object#toString() toString()} method, generates a string suitable for using as a filename.
+     * Using the key's {@link Object#toString() toString()} method, generates a string suitable for
+     * using as a filename.
      *
      * @param key
      * @return a string uniquely representing the the key.
      */
-    public String hash(K key){
+    public String hash(K key) {
         final byte[] ba;
         synchronized (hash) {
             hash.update(key.toString().getBytes());

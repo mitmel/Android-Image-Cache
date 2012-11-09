@@ -166,21 +166,21 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         mCompressFormat = format;
         mQuality = quality;
     }
-    
+
     /**
      * Sets the compression format for resized images.
-     * 
+     *
      * @param format
      */
     public void setCompressFormat(CompressFormat format) {
         mCompressFormat = format;
     }
-    
+
     /**
-     * Set the image quality. Hint to the compressor, 0-100. 0 meaning compress for small size, 
-     * 100 meaning compress for max quality. Some formats, like PNG which is lossless, will 
+     * Set the image quality. Hint to the compressor, 0-100. 0 meaning compress for small size,
+     * 100 meaning compress for max quality. Some formats, like PNG which is lossless, will
      * ignore the quality setting
-     * 
+     *
      * @param quality
      */
     public void setQuality(int quality) {
@@ -593,10 +593,10 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         jobs.clear();
         mExecutor.getQueue().clear();
     }
-    
+
     public void cancel(long id) {
         synchronized (jobs) {
-            Runnable job = jobs.get(id);
+            final Runnable job = jobs.get(id);
             if (job != null) {
                 jobs.remove(id);
                 mExecutor.remove(job);
@@ -687,7 +687,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         }
         if (USE_APACHE_NC){
             final HttpGet get = new HttpGet(uri.toString());
-            HttpParams params = get.getParams();
+            final HttpParams params = get.getParams();
             params.setParameter(ClientPNames.HANDLE_REDIRECTS, true);
 
             final HttpResponse hr = hc.execute(get);
