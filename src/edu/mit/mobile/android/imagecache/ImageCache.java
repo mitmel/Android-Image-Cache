@@ -156,7 +156,15 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         return mInstance;
     }
 
-    private ImageCache(Context context, CompressFormat format, int quality) {
+    /**
+     * Generally, it's best to use the shared image cache using {@link #getInstance(Context)}. Use
+     * this if you want to customize a cache or keep it separate.
+     *
+     * @param context
+     * @param format
+     * @param quality
+     */
+    public ImageCache(Context context, CompressFormat format, int quality) {
         super(context.getCacheDir(), null, getExtension(format));
         hc = getHttpClient();
 
@@ -679,7 +687,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      *             if the HTTP response code wasn't 200 or any other HTTP errors
      * @throws IOException
      */
-    private void downloadImage(String key, Uri uri) throws ClientProtocolException, IOException {
+    protected void downloadImage(String key, Uri uri) throws ClientProtocolException, IOException {
         if (DEBUG) {
             Log.d(TAG, "downloadImage(" + key + ", " + uri + ")");
         }
