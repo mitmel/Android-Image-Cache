@@ -120,7 +120,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
     private static final int MSG_IMAGE_LOADED = 100;
 
-    private static class ImageLoadHandler extends Handler{
+    private final KeyedLock<String> mDownloading = new KeyedLock<String>();
+
+    private static class ImageLoadHandler extends Handler {
         private final ImageCache mCache;
 
         public ImageLoadHandler(ImageCache cache) {
@@ -401,39 +403,52 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
         final String scaledKey = getKey(uri, width, height);
 
-        Drawable d = getDrawable(scaledKey);
-        if (d != null) {
-            return d;
-        }
+        mDownloading.lock(scaledKey);
 
-        Bitmap bmp = get(scaledKey);
-
-        if (bmp == null) {
-            if ("file".equals(uri.getScheme())) {
-                bmp = scaleLocalImage(new File(uri.getPath()), width, height);
-            } else {
-                final String sourceKey = getKey(uri);
-
-                if (! contains(sourceKey)) {
-                    downloadImage(sourceKey, uri);
-                }
-
-                bmp = scaleLocalImage(getFile(sourceKey), width, height);
-                if (bmp == null) {
-                    clear(sourceKey);
-                }
+        try {
+            Drawable d = getDrawable(scaledKey);
+            if (d != null) {
+                return d;
             }
-            put(scaledKey, bmp);
 
+            Bitmap bmp = get(scaledKey);
+
+            if (bmp == null) {
+                if ("file".equals(uri.getScheme())) {
+                    bmp = scaleLocalImage(new File(uri.getPath()), width, height);
+                } else {
+                    final String sourceKey = getKey(uri);
+
+                    mDownloading.lock(sourceKey);
+
+                    try {
+                        if (!contains(sourceKey)) {
+                            downloadImage(sourceKey, uri);
+                        }
+                    } finally {
+                        mDownloading.unlock(sourceKey);
+                    }
+
+                    bmp = scaleLocalImage(getFile(sourceKey), width, height);
+                    if (bmp == null) {
+                        clear(sourceKey);
+                    }
+                }
+                put(scaledKey, bmp);
+
+            }
+            if (bmp == null) {
+                throw new ImageCacheException("got null bitmap from request to scale");
+
+            }
+            d = new BitmapDrawable(mRes, bmp);
+            putDrawable(scaledKey, d);
+
+            return d;
+
+        } finally {
+            mDownloading.unlock(scaledKey);
         }
-        if (bmp == null) {
-            throw new ImageCacheException("got null bitmap from request to scale");
-
-        }
-        d = new BitmapDrawable(mRes, bmp);
-        putDrawable(scaledKey, d);
-
-        return d;
     }
 
     /**
