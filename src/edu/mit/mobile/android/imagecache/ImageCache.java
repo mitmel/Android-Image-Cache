@@ -50,7 +50,6 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.HttpParams;
 
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
@@ -67,23 +66,20 @@ import android.widget.ImageView;
 
 /**
  * <p>
- * An image download-and-cacher that also knows how to efficiently generate
- * thumbnails of various sizes.
+ * An image download-and-cacher that also knows how to efficiently generate thumbnails of various
+ * sizes.
  * </p>
  *
  * <p>
  * The cache is shared with the entire process, so make sure you
  * {@link #registerOnImageLoadListener(OnImageLoadListener)} and
- * {@link #unregisterOnImageLoadListener(OnImageLoadListener)} any load
- * listeners in your activities.
+ * {@link #unregisterOnImageLoadListener(OnImageLoadListener)} any load listeners in your
+ * activities.
  * </p>
  *
  * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
  *
  */
-// the below is not accurate, but there's a bug in Lint that thinks that we use CompressFormat#WEBP
-// (which we don't)
-@TargetApi(14)
 public class ImageCache extends DiskCache<String, Bitmap> {
     private static final String TAG = ImageCache.class.getSimpleName();
 
