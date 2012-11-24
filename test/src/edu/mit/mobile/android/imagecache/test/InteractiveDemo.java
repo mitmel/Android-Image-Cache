@@ -16,48 +16,21 @@ package edu.mit.mobile.android.imagecache.test;
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
 import android.app.ListActivity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Gallery;
-import android.widget.ListAdapter;
 import edu.mit.mobile.android.imagecache.ImageCache;
-import edu.mit.mobile.android.imagecache.ImageLoaderAdapter;
-import edu.mit.mobile.android.imagecache.SimpleThumbnailAdapter;
 
 @SuppressWarnings("deprecation")
 public class InteractiveDemo extends ListActivity {
     /** Called when the activity is first created. */
     private ImageCache mCache;
 
-    private static final List<HashMap<String, String>> data = new ArrayList<HashMap<String, String>>();
-    static {
+    private final TestData mTestData = new TestData();
 
-        data.add(addItem("locast tourism", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locast_tourism.jpg"));
-        data.add(addItem("green home", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/gha_01.jpg"));
-        data.add(addItem("green home 2", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/gha_05.jpg"));
-        data.add(addItem("Locast healthcare", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locast%20healthcare.jpg"));
-        data.add(addItem("locast h2flow 1", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/water%20project%20IMAGE-72dpi.jpg"));
-        data.add(addItem("locast h2flow 2", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/H2flOw_image1.jpg"));
-        data.add(addItem("locast h2flow 3", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/H2flOw_image2.jpg"));
-        data.add(addItem("locast unicef 1", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/Screen%20shot%202011-08-16%20at%204.05.57%20PM.png"));
-        data.add(addItem("locast unicef 2", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/Screen%20shot%202011-08-16%20at%204.14.00%20PM.png"));
-        data.add(addItem("locast unicef 3", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/DSC01492.JPG"));
-        data.add(addItem("memory traces", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/North%20end%20memory.jpg"));
-        data.add(addItem("uv tracking", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/MEL_LocastProjectsandNextTV2%2031_1.jpg"));
-        data.add(addItem("civic media 1", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/sites/mel-drudev.mit.edu/files/locast_civic_00.jpg"));
-        data.add(addItem("civic media 2", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locastPA2.jpg"));
-        data.add(addItem("civic media 3", "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locastPA3.jpg"));
-
-        // fill it up!
-        data.addAll(data);
-        data.addAll(data);
-    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -68,14 +41,82 @@ public class InteractiveDemo extends ListActivity {
 
         mCache = ImageCache.getInstance(this);
 
+        initData();
 
-        final ListAdapter bigAdapter = new SimpleThumbnailAdapter(this, data, R.layout.thumbnail_item, new String[]{"thumb"}, new int[]{R.id.thumb}, new int[]{R.id.thumb});
+        setListAdapter(TestData.generateAdapter(this, mTestData, R.layout.thumbnail_item, mCache,
+                320, 200));
 
-        setListAdapter(new ImageLoaderAdapter(this, bigAdapter, mCache, new int[]{R.id.thumb}, 320, 200, ImageLoaderAdapter.UNIT_DIP));
+        gallery.setAdapter(TestData.generateAdapter(this, mTestData, R.layout.small_thumbnail_item,
+                mCache, 160, 100));
+    }
 
-        final ListAdapter smallAdapter = new SimpleThumbnailAdapter(this, data, R.layout.small_thumbnail_item, new String[]{"thumb"}, new int[]{R.id.thumb}, new int[]{R.id.thumb});
+    private void initData() {
 
-        gallery.setAdapter(new ImageLoaderAdapter(this, smallAdapter, mCache, new int[]{R.id.thumb}, 160, 100, ImageLoaderAdapter.UNIT_DIP));
+        mTestData
+                .addItem(
+                        "locast tourism",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locast_tourism.jpg");
+        mTestData
+                .addItem(
+                        "green home",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/gha_01.jpg");
+        mTestData
+                .addItem(
+                        "green home 2",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/gha_05.jpg");
+        mTestData
+                .addItem(
+                        "Locast healthcare",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locast%20healthcare.jpg");
+        mTestData
+                .addItem(
+                        "locast h2flow 1",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/water%20project%20IMAGE-72dpi.jpg");
+        mTestData
+                .addItem(
+                        "locast h2flow 2",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/H2flOw_image1.jpg");
+        mTestData
+                .addItem(
+                        "locast h2flow 3",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/H2flOw_image2.jpg");
+        mTestData
+                .addItem(
+                        "locast unicef 1",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/Screen%20shot%202011-08-16%20at%204.05.57%20PM.png");
+        mTestData
+                .addItem(
+                        "locast unicef 2",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/Screen%20shot%202011-08-16%20at%204.14.00%20PM.png");
+        mTestData
+                .addItem(
+                        "locast unicef 3",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/DSC01492.JPG");
+        mTestData
+                .addItem(
+                        "memory traces",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/North%20end%20memory.jpg");
+        mTestData
+                .addItem(
+                        "uv tracking",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/MEL_LocastProjectsandNextTV2%2031_1.jpg");
+        mTestData
+                .addItem(
+                        "civic media 1",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/sites/mel-drudev.mit.edu/files/locast_civic_00.jpg");
+        mTestData
+                .addItem(
+                        "civic media 2",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locastPA2.jpg");
+        mTestData
+                .addItem(
+                        "civic media 3",
+                        "http://mobile.mit.edu/sites/mel-dru.mit.edu.mainsite/files/imagecache/implementation_big/locastPA3.jpg");
+
+        // fill it up!
+        mTestData.addAll(mTestData);
+        mTestData.addAll(mTestData);
+
     }
 
     @Override
@@ -84,6 +125,10 @@ public class InteractiveDemo extends ListActivity {
         case R.id.clear:
             mCache.clear();
             return true;
+
+            case R.id.grid:
+                startActivity(new Intent(this, ConcurrencyTest.class));
+                return true;
 
             default:
                 return super.onOptionsItemSelected(item);
@@ -97,12 +142,4 @@ public class InteractiveDemo extends ListActivity {
         return true;
     }
 
-    private static HashMap<String, String> addItem(String title, String image) {
-        final HashMap<String, String> m = new HashMap<String, String>();
-
-        m.put("title", title);
-        m.put("thumb", image);
-
-        return m;
-    }
 }

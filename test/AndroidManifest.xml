@@ -1,24 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-      package="edu.mit.mobile.android.imagecache.test"
-      android:versionCode="1"
-      android:versionName="1.0">
-    <uses-permission android:name="android.permission.INTERNET" />
-    
-   	<!-- needed to make the images less ugly -->
-	<uses-sdk android:minSdkVersion="4" android:targetSdkVersion="15" />
-	<supports-screens android:largeScreens="true" android:anyDensity="true" />
-	
-    <instrumentation android:targetPackage="edu.mit.mobile.android.imagecache.test" android:name="android.test.InstrumentationTestRunner" />
-    <application android:icon="@drawable/icon" android:label="@string/app_name">
+    package="edu.mit.mobile.android.imagecache.test"
+    android:versionCode="1"
+    android:versionName="1.0" >
 
-    <uses-library android:name="android.test.runner" />
-        <activity android:name="InteractiveDemo"
-                  android:label="@string/app_name">
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- needed to make the images less ugly -->
+    <uses-sdk
+        android:minSdkVersion="4"
+        android:targetSdkVersion="15" />
+
+    <supports-screens
+        android:anyDensity="true"
+        android:largeScreens="true" />
+
+    <instrumentation
+        android:name="android.test.InstrumentationTestRunner"
+        android:targetPackage="edu.mit.mobile.android.imagecache.test" />
+
+    <application
+        android:icon="@drawable/icon"
+        android:label="@string/app_name" >
+        <uses-library android:name="android.test.runner" />
+
+        <activity
+            android:name="InteractiveDemo"
+            android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="ConcurrencyTest"
+            android:label="Concurrency Test" >
+        </activity>
     </application>
+
 </manifest>

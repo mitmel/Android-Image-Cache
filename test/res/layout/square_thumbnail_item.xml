@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/thumb"
+    android:layout_width="64dip"
+    android:layout_height="64dip"
+    android:contentDescription="@null"
+    android:scaleType="fitCenter"
+    android:cropToPadding="true"
+    android:src="@drawable/icon" />
