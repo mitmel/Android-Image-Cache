@@ -105,9 +105,11 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
     // this is a custom Executor, as we want to have the tasks loaded in FILO order. FILO works
     // particularly well when scrolling with a ListView.
-    private final ThreadPoolExecutor mExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE,
-            KEEP_ALIVE_TIME, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
-    private final Map<Long, Runnable> jobs = Collections.synchronizedMap(new HashMap<Long, Runnable>());
+    private final ThreadPoolExecutor mExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE,
+            MAXIMUM_POOL_SIZE, KEEP_ALIVE_TIME, TimeUnit.SECONDS,
+            new PriorityBlockingQueue<Runnable>());
+    private final Map<Long, Runnable> jobs = Collections
+            .synchronizedMap(new HashMap<Long, Runnable>());
 
     private final HttpClient hc;
 
@@ -137,7 +139,6 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     }
 
     private final ImageLoadHandler mHandler = new ImageLoadHandler(this);
-
 
     // TODO make it so this is customizable on the instance level.
     /**
@@ -173,9 +174,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     }
 
     /**
-     * Set the image quality. Hint to the compressor, 0-100. 0 meaning compress for small size,
-     * 100 meaning compress for max quality. Some formats, like PNG which is lossless, will
-     * ignore the quality setting
+     * Set the image quality. Hint to the compressor, 0-100. 0 meaning compress for small size, 100
+     * meaning compress for max quality. Some formats, like PNG which is lossless, will ignore the
+     * quality setting
      *
      * @param quality
      */
@@ -196,25 +197,24 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     private static String getExtension(CompressFormat format) {
         String extension;
         switch (format) {
-        case JPEG:
-            extension = ".jpg";
-            break;
+            case JPEG:
+                extension = ".jpg";
+                break;
 
-        case PNG:
-            extension = ".png";
-            break;
+            case PNG:
+                extension = ".png";
+                break;
 
-        default:
-            throw new IllegalArgumentException();
+            default:
+                throw new IllegalArgumentException();
         }
 
         return extension;
     }
 
     /**
-     * If loading a number of images where you don't have a unique ID to
-     * represent the individual load, this can be used to generate a sequential
-     * ID.
+     * If loading a number of images where you don't have a unique ID to represent the individual
+     * load, this can be used to generate a sequential ID.
      *
      * @return a new unique ID
      */
@@ -247,8 +247,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         }
         if (image != null) {
             if (!image.compress(mCompressFormat, mQuality, out)) {
-                Log.e(TAG, "error writing compressed image to disk for key "
-                        + key);
+                Log.e(TAG, "error writing compressed image to disk for key " + key);
             }
         } else {
             Log.e(TAG, "Ignoring attempt to write null image to disk cache");
@@ -256,19 +255,16 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     }
 
     /**
-     * Gets an instance of AndroidHttpClient if the devices has it (it was
-     * introduced in 2.2), or falls back on a http client that should work
-     * reasonably well.
+     * Gets an instance of AndroidHttpClient if the devices has it (it was introduced in 2.2), or
+     * falls back on a http client that should work reasonably well.
      *
      * @return a working instance of an HttpClient
      */
     private HttpClient getHttpClient() {
         HttpClient ahc;
         try {
-            final Class<?> ahcClass = Class
-                    .forName("android.net.http.AndroidHttpClient");
-            final Method newInstance = ahcClass.getMethod("newInstance",
-                    String.class);
+            final Class<?> ahcClass = Class.forName("android.net.http.AndroidHttpClient");
+            final Method newInstance = ahcClass.getMethod("newInstance", String.class);
             ahc = (HttpClient) newInstance.invoke(null, "ImageCache");
 
         } catch (final ClassNotFoundException e) {
@@ -277,31 +273,26 @@ public class ImageCache extends DiskCache<String, Bitmap> {
             dhc = null;
 
             final SchemeRegistry registry = new SchemeRegistry();
-            registry.register(new Scheme("http", PlainSocketFactory
-                    .getSocketFactory(), 80));
-            registry.register(new Scheme("https", SSLSocketFactory
-                    .getSocketFactory(), 443));
+            registry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
+            registry.register(new Scheme("https", SSLSocketFactory.getSocketFactory(), 443));
 
-            final ThreadSafeClientConnManager manager = new ThreadSafeClientConnManager(
-                    params, registry);
+            final ThreadSafeClientConnManager manager = new ThreadSafeClientConnManager(params,
+                    registry);
             ahc = new DefaultHttpClient(manager, params);
 
         } catch (final NoSuchMethodException e) {
 
-            final RuntimeException re = new RuntimeException(
-                    "Programming error");
+            final RuntimeException re = new RuntimeException("Programming error");
             re.initCause(e);
             throw re;
 
         } catch (final IllegalAccessException e) {
-            final RuntimeException re = new RuntimeException(
-                    "Programming error");
+            final RuntimeException re = new RuntimeException("Programming error");
             re.initCause(e);
             throw re;
 
         } catch (final InvocationTargetException e) {
-            final RuntimeException re = new RuntimeException(
-                    "Programming error");
+            final RuntimeException re = new RuntimeException("Programming error");
             re.initCause(e);
             throw re;
         }
@@ -310,11 +301,10 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
     /**
      * <p>
-     * Registers an {@link OnImageLoadListener} with the cache. When an image is
-     * loaded asynchronously either directly by way of
-     * {@link #scheduleLoadImage(long, Uri, int, int)} or indirectly by
-     * {@link #loadImage(long, Uri, int, int)}, any registered listeners will
-     * get called.
+     * Registers an {@link OnImageLoadListener} with the cache. When an image is loaded
+     * asynchronously either directly by way of {@link #scheduleLoadImage(long, Uri, int, int)} or
+     * indirectly by {@link #loadImage(long, Uri, int, int)}, any registered listeners will get
+     * called.
      * </p>
      *
      * <p>
@@ -323,15 +313,13 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      *
      * @param onImageLoadListener
      */
-    public void registerOnImageLoadListener(
-            OnImageLoadListener onImageLoadListener) {
+    public void registerOnImageLoadListener(OnImageLoadListener onImageLoadListener) {
         mImageLoadListeners.add(onImageLoadListener);
     }
 
     /**
      * <p>
-     * Unregisters the listener with the cache. This will not cancel any pending
-     * load requests.
+     * Unregisters the listener with the cache. This will not cancel any pending load requests.
      * </p>
      *
      * <p>
@@ -340,8 +328,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      *
      * @param onImageLoadListener
      */
-    public void unregisterOnImageLoadListener(
-            OnImageLoadListener onImageLoadListener) {
+    public void unregisterOnImageLoadListener(OnImageLoadListener onImageLoadListener) {
         mImageLoadListeners.remove(onImageLoadListener);
     }
 
@@ -387,7 +374,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
     /**
      * Puts a drawable into memory cache.
-     * @param key a key generated by {@link #getKey(Uri)} or {@link #getKey(Uri, int, int)}
+     *
+     * @param key
+     *            a key generated by {@link #getKey(Uri)} or {@link #getKey(Uri, int, int)}
      * @param drawable
      */
     public void putDrawable(String key, Drawable drawable) {
@@ -395,9 +384,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     }
 
     /**
-     * A blocking call to get an image. If it's in the cache, it'll return the
-     * drawable immediately. Otherwise it will download, scale, and cache the
-     * image before returning it. For non-blocking use, see {@link #loadImage(long, Uri, int, int)}
+     * A blocking call to get an image. If it's in the cache, it'll return the drawable immediately.
+     * Otherwise it will download, scale, and cache the image before returning it. For non-blocking
+     * use, see {@link #loadImage(long, Uri, int, int)}
      *
      * @param uri
      * @param width
@@ -407,33 +396,35 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      * @throws IOException
      * @throws ImageCacheException
      */
-    public Drawable getImage(Uri uri, int width, int height)
-            throws ClientProtocolException, IOException, ImageCacheException {
+    public Drawable getImage(Uri uri, int width, int height) throws ClientProtocolException,
+            IOException, ImageCacheException {
+
         final String scaledKey = getKey(uri, width, height);
 
         Drawable d = getDrawable(scaledKey);
-        if (d != null){
+        if (d != null) {
             return d;
         }
 
         Bitmap bmp = get(scaledKey);
 
-        if(bmp == null){
+        if (bmp == null) {
             if ("file".equals(uri.getScheme())) {
-                bmp = scaleLocalImage(new File(uri.getPath()), width,
-                        height);
+                bmp = scaleLocalImage(new File(uri.getPath()), width, height);
             } else {
                 final String sourceKey = getKey(uri);
 
                 if (! contains(sourceKey)) {
                     downloadImage(sourceKey, uri);
                 }
+
                 bmp = scaleLocalImage(getFile(sourceKey), width, height);
-                if (bmp == null){
+                if (bmp == null) {
                     clear(sourceKey);
                 }
             }
             put(scaledKey, bmp);
+
         }
         if (bmp == null) {
             throw new ImageCacheException("got null bitmap from request to scale");
@@ -457,10 +448,8 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      * @return a cache key unique to the given parameters
      */
     public String getKey(Uri uri, int width, int height) {
-        return uri.buildUpon()
-                .appendQueryParameter("width", String.valueOf(width))
-                .appendQueryParameter("height", String.valueOf(height)).build()
-                .toString();
+        return uri.buildUpon().appendQueryParameter("width", String.valueOf(width))
+                .appendQueryParameter("height", String.valueOf(height)).build().toString();
     }
 
     private class ImageLoadTask implements Runnable, Comparable<ImageLoadTask> {
@@ -522,23 +511,22 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     }
 
     /**
-     * Checks the cache for an image matching the given criteria and returns it.
-     * If it isn't immediately available, calls {@link #scheduleLoadImage}.
+     * Checks the cache for an image matching the given criteria and returns it. If it isn't
+     * immediately available, calls {@link #scheduleLoadImage}.
      *
      * @param id
-     *            An ID to keep track of image load requests. For one-off loads,
-     *            this can just be the ID of the {@link ImageView}. Otherwise,
-     *            an unique ID can be acquired using {@link #getNewID()}.
+     *            An ID to keep track of image load requests. For one-off loads, this can just be
+     *            the ID of the {@link ImageView}. Otherwise, an unique ID can be acquired using
+     *            {@link #getNewID()}.
      *
      * @param image
-     *            the image to be loaded. Can be a local file or a network
-     *            resource.
+     *            the image to be loaded. Can be a local file or a network resource.
      * @param width
      *            the maximum width of the resulting image
      * @param height
      *            the maximum height of the resulting image
-     * @return the cached bitmap if it's available immediately or null if it
-     *         needs to be loaded asynchronously.
+     * @return the cached bitmap if it's available immediately or null if it needs to be loaded
+     *         asynchronously.
      */
     public Drawable loadImage(long id, Uri image, int width, int height) throws IOException {
         if (DEBUG) {
@@ -556,35 +544,33 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     }
 
     /**
-     * Schedules a load of the given image. When the image has finished loading
-     * and scaling, all registered {@link OnImageLoadListener}s will be called.
+     * Schedules a load of the given image. When the image has finished loading and scaling, all
+     * registered {@link OnImageLoadListener}s will be called.
      *
      * @param id
-     *            An ID to keep track of image load requests. For one-off loads,
-     *            this can just be the ID of the {@link ImageView}. Otherwise,
-     *            an unique ID can be acquired using {@link #getNewID()}.
+     *            An ID to keep track of image load requests. For one-off loads, this can just be
+     *            the ID of the {@link ImageView}. Otherwise, an unique ID can be acquired using
+     *            {@link #getNewID()}.
      *
      * @param image
-     *            the image to be loaded. Can be a local file or a network
-     *            resource.
+     *            the image to be loaded. Can be a local file or a network resource.
      * @param width
      *            the maximum width of the resulting image
      * @param height
      *            the maximum height of the resulting image
      */
     public void scheduleLoadImage(long id, Uri image, int width, int height) {
-        if (DEBUG){
+        if (DEBUG) {
             Log.d(TAG, "executing new ImageLoadTask in background...");
         }
         final ImageLoadTask imt = new ImageLoadTask(id, image, width, height);
 
-        jobs.put(id,imt);
+        jobs.put(id, imt);
         mExecutor.execute(imt);
     }
 
     /**
-     * Cancels all the asynchronous image loads.
-     * Note: currently does not function properly.
+     * Cancels all the asynchronous image loads. Note: currently does not function properly.
      *
      */
     public void cancelLoads() {
@@ -618,8 +604,8 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     private static Bitmap scaleLocalImage(File localFile, int width, int height)
             throws ClientProtocolException, IOException {
 
-        if (DEBUG){
-            Log.d(TAG, "scaleLocalImage(" + localFile + ", "+ width +", "+ height + ")");
+        if (DEBUG) {
+            Log.d(TAG, "scaleLocalImage(" + localFile + ", " + width + ", " + height + ")");
         }
 
         if (!localFile.exists()) {
@@ -654,7 +640,8 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         // decode with inSampleSize
         final BitmapFactory.Options o2 = new BitmapFactory.Options();
         o2.inSampleSize = scale;
-        final Bitmap prescale = BitmapFactory.decodeStream(new FileInputStream(localFile), null, o2);
+        final Bitmap prescale = BitmapFactory
+                .decodeStream(new FileInputStream(localFile), null, o2);
 
         if (prescale == null) {
             Log.e(TAG, localFile + " could not be decoded");
@@ -666,9 +653,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         return prescale;
     }
 
-
     /**
-     * Blocking call to download an image. The image is placed directly into the disk cache at the given key.
+     * Blocking call to download an image. The image is placed directly into the disk cache at the
+     * given key.
      *
      * @param uri
      *            the location of the image
@@ -677,13 +664,11 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      *             if the HTTP response code wasn't 200 or any other HTTP errors
      * @throws IOException
      */
-    private void downloadImage(String key, Uri uri) throws ClientProtocolException,
-            IOException {
-
-        if (DEBUG){
+    private void downloadImage(String key, Uri uri) throws ClientProtocolException, IOException {
+        if (DEBUG) {
             Log.d(TAG, "downloadImage(" + key + ", " + uri + ")");
         }
-        if (USE_APACHE_NC){
+        if (USE_APACHE_NC) {
             final HttpGet get = new HttpGet(uri.toString());
             final HttpParams params = get.getParams();
             params.setParameter(ClientPNames.HANDLE_REDIRECTS, true);
@@ -691,8 +676,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
             final HttpResponse hr = hc.execute(get);
             final StatusLine hs = hr.getStatusLine();
             if (hs.getStatusCode() != 200) {
-                throw new HttpResponseException(hs.getStatusCode(),
-                        hs.getReasonPhrase());
+                throw new HttpResponseException(hs.getStatusCode(), hs.getReasonPhrase());
             }
 
             final HttpEntity ent = hr.getEntity();
@@ -702,18 +686,22 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
                 putRaw(key, ent.getContent());
                 if (DEBUG) {
-                    Log.d(TAG, "source file of " + uri + " saved to disk cache");
+                    Log.d(TAG, "source file of " + uri + " saved to disk cache at location "
+                            + getFile(key).getAbsolutePath());
                 }
             } finally {
                 ent.consumeContent();
             }
-        }else{
+        } else {
             final URLConnection con = new URL(uri.toString()).openConnection();
             putRaw(key, con.getInputStream());
             if (DEBUG) {
-                Log.d(TAG, "source file of " + uri + " saved to disk cache at key " + key);
+                Log.d(TAG,
+                        "source file of " + uri + " saved to disk cache at location "
+                                + getFile(key).getAbsolutePath());
             }
         }
+
     }
 
     private void notifyListeners(LoadResult result) {
@@ -724,8 +712,8 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
     /**
      * Implement this and register it using
-     * {@link ImageCache#registerOnImageLoadListener(OnImageLoadListener)} to be
-     * notified when asynchronous image loads have completed.
+     * {@link ImageCache#registerOnImageLoadListener(OnImageLoadListener)} to be notified when
+     * asynchronous image loads have completed.
      *
      * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
      *
@@ -734,9 +722,13 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         /**
          * Called when the image has been loaded and scaled.
          *
-         * @param id the ID provided by {@link ImageCache#loadImage(long, Uri, int, int)} or {@link ImageCache#scheduleLoadImage(long, Uri, int, int)}
-         * @param imageUri the uri of the image that was originally requested
-         * @param image the loaded and scaled image
+         * @param id
+         *            the ID provided by {@link ImageCache#loadImage(long, Uri, int, int)} or
+         *            {@link ImageCache#scheduleLoadImage(long, Uri, int, int)}
+         * @param imageUri
+         *            the uri of the image that was originally requested
+         * @param image
+         *            the loaded and scaled image
          */
         public void onImageLoaded(long id, Uri imageUri, Drawable image);
     }
