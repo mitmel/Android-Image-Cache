@@ -475,6 +475,24 @@ public class ImageCache extends DiskCache<String, Bitmap> {
                 .appendQueryParameter("height", String.valueOf(height)).build().toString();
     }
 
+    @Override
+    public synchronized boolean clear() {
+        final boolean success = super.clear();
+
+        mMemCache.evictAll();
+
+        return success;
+    }
+
+    @Override
+    public synchronized boolean clear(String key) {
+        final boolean success = super.clear(key);
+
+        mMemCache.remove(key);
+
+        return success;
+    }
+
     private class ImageLoadTask implements Runnable, Comparable<ImageLoadTask> {
         private final long id;
         private final Uri uri;
