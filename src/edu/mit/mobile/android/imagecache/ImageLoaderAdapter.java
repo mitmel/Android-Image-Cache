@@ -136,7 +136,10 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
             if (convertView != null) {
                 final ImageView iv = (ImageView) convertView.findViewById(id);
                 if (iv != null) {
-                    mCache.cancel((Long) iv.getTag(R.id.ic__load_id));
+                    final Long tagId = (Long) iv.getTag(R.id.ic__load_id);
+                    if (tagId != null) {
+                        mCache.cancel(tagId);
+                    }
                 }
             }
 
