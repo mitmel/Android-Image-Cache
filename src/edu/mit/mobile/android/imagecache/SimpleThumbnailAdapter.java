@@ -64,9 +64,9 @@ public class SimpleThumbnailAdapter extends SimpleAdapter {
             Drawable defaultImage) {
         v.setImageDrawable(defaultImage);
         if (value != null && value.length() > 0) {
-            v.setTag(Uri.parse(value));
+            v.setTag(R.id.ic__uri, Uri.parse(value));
         } else {
-            v.setTag(null);
+            v.setTag(R.id.ic__uri, null);
         }
     }
 

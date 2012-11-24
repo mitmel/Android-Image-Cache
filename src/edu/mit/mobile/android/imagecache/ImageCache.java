@@ -625,6 +625,9 @@ public class ImageCache extends DiskCache<String, Bitmap> {
             if (job != null) {
                 jobs.remove(id);
                 mExecutor.remove(job);
+                if (DEBUG) {
+                    Log.d(TAG, "removed load id " + id);
+                }
             }
         }
     }

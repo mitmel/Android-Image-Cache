@@ -131,7 +131,15 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
     public View getView(int position, View convertView, ViewGroup parent) {
         final View v = super.getView(position, convertView, parent);
 
+
         for (final int id : mImageViewIDs) {
+            if (convertView != null) {
+                final ImageView iv = (ImageView) convertView.findViewById(id);
+                if (iv != null) {
+                    mCache.cancel((Long) iv.getTag(R.id.ic__load_id));
+                }
+            }
+
             final ImageView iv = (ImageView) v.findViewById(id);
             if (iv == null) {
                 continue;
@@ -148,9 +156,10 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
                 }
             }
 
-            final Uri tag = (Uri) iv.getTag();
+            final Uri tag = (Uri) iv.getTag(R.id.ic__uri);
             if (tag != null) {
                 final long imageID = mCache.getNewID();
+                iv.setTag(R.id.ic__load_id, imageID);
                 // attempt to bypass all the loading machinery to get the image loaded as quickly
                 // as possible
                 Drawable d = null;
@@ -192,7 +201,7 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
         if (ImageCache.DEBUG) {
             Log.d(TAG, "loading ID " + id + " with an image");
         }
-        if (imageUri.equals(iv.getTag())) {
+        if (imageUri.equals(iv.getTag(R.id.ic__uri))) {
             iv.setImageDrawable(image);
         }
         mImageViewsToLoad.remove(id);
