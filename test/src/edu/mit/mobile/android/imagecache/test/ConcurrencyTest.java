@@ -1,6 +1,7 @@
 package edu.mit.mobile.android.imagecache.test;
 
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.http.client.ClientProtocolException;
 
@@ -89,6 +90,8 @@ public class ConcurrencyTest extends Activity {
 
     private static class SlowImageCache extends ImageCache {
 
+        private final Random r = new Random();
+
         protected SlowImageCache(Context context) {
             super(context, CompressFormat.JPEG, 85);
         }
@@ -97,7 +100,7 @@ public class ConcurrencyTest extends Activity {
         protected void downloadImage(String key, Uri uri) throws ClientProtocolException,
                 IOException {
             try {
-                Thread.sleep(3000);
+                Thread.sleep(r.nextInt(3000) + 500);
             } catch (final InterruptedException e) {
 
             }
