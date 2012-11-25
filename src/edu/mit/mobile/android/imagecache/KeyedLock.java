@@ -54,13 +54,20 @@ public class KeyedLock<K> {
         ReentrantLock lock;
 
         synchronized (mLocks) {
-            lock = mLocks.remove(key);
+            lock = mLocks.get(key);
             if (lock == null) {
                 Log.e(TAG, "Attempting to unlock lock for key " + key + " which has no entry");
                 return;
             }
+            if (DEBUG) {
+                log(lock + " has queued threads " + lock.hasQueuedThreads() + " for key " + key);
+            }
+            // maybe entries should be removed when there are no queued threads. This would
+            // occasionally fail...
+            // final boolean queued = lock.hasQueuedThreads();
+
+            lock.unlock();
         }
-        lock.unlock();
     }
 
     private void log(String message) {
