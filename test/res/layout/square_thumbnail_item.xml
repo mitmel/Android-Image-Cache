@@ -6,4 +6,4 @@
     android:contentDescription="@null"
     android:scaleType="fitCenter"
     android:cropToPadding="true"
-    android:src="@drawable/icon" />
+    android:src="@drawable/ic_launcher" />

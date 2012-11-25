@@ -61,7 +61,8 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
 
         final String key01 = "foo";
         final String key02 = "bar";
-        Bitmap bmp = BitmapFactory.decodeResource(contextInst.getResources(), R.drawable.icon);
+        Bitmap bmp = BitmapFactory.decodeResource(contextInst.getResources(),
+                R.drawable.ic_launcher);
         assertTrue(bmp.getHeight() > 0);
         assertTrue(bmp.getWidth() > 0);
 

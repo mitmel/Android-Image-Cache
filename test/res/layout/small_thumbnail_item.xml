@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ImageView
 	xmlns:android="http://schemas.android.com/apk/res/android"
-	android:src="@drawable/icon"
+	android:src="@drawable/ic_launcher"
 	android:id="@+id/thumb"
 	android:layout_width="160dip"
 	android:layout_height="100dip"
 	android:contentDescription="@null"
-	android:scaleType="centerCrop" />
+	android:scaleType="fitCenter" />
 
