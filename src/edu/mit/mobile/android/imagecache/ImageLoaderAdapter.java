@@ -122,9 +122,22 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 
     @Override
     protected void finalize() throws Throwable {
-        // TODO this should probably be in its own method, so it can be called in onPause / onResume
-        mCache.unregisterOnImageLoadListener(this);
+        unregisterOnImageLoadListener();
         super.finalize();
+    }
+
+    /**
+     * This can be called from your onResume() method.
+     */
+    public void registerOnImageLoadListener() {
+        mCache.registerOnImageLoadListener(this);
+    }
+
+    /**
+     * This can be called from your onPause() method.
+     */
+    public void unregisterOnImageLoadListener() {
+        mCache.unregisterOnImageLoadListener(this);
     }
 
     @Override
