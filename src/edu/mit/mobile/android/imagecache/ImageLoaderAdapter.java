@@ -41,9 +41,9 @@ import com.commonsware.cwac.adapter.AdapterWrapper;
  * <p>
  * To use, pass in a ListAdapter that generates ImageViews in the layout hierarchy of getView().
  * ImageViews are searched for using the IDs specified in imageViewIDs. When found,
- * {@link ImageView#getTag()} is called and should return a {@link Uri} referencing a local or
- * remote image. See {@link ImageCache#loadImage(long, Uri, int, int)} for details on the types of
- * URIs and images supported.
+ * {@link ImageView#getTag(R.id.ic__load_id)} is called and should return a {@link Uri} referencing
+ * a local or remote image. See {@link ImageCache#loadImage(long, Uri, int, int)} for details on the
+ * types of URIs and images supported.
  * </p>
  *
  * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
