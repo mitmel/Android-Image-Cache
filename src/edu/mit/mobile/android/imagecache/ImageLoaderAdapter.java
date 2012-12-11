@@ -87,7 +87,11 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 
     /**
      * @param context
+     *            a context for getting the display density. You don't need to worry about this
+     *            class holding on to a reference to this: it's only used in the constructor.
      * @param wrapped
+     *            the adapter that's wrapped. See {@link ImageLoaderAdapter} for the requirements of
+     *            using this adapter wrapper.
      * @param cache
      * @param imageViewIDs
      *            a list of resource IDs matching the ImageViews that should be scanned and loaded.
