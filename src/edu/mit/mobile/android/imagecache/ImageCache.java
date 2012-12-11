@@ -62,6 +62,7 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.util.SparseArray;
 import android.widget.ImageView;
 
 /**
@@ -459,6 +460,8 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         }
     }
 
+    private final SparseArray<String> mKeyCache = new SparseArray<String>();
+
     /**
      * Returns an opaque cache key representing the given uri, width and height.
      *
@@ -471,8 +474,16 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      * @return a cache key unique to the given parameters
      */
     public String getKey(Uri uri, int width, int height) {
-        return uri.buildUpon().appendQueryParameter("width", String.valueOf(width))
-                .appendQueryParameter("height", String.valueOf(height)).build().toString();
+        // collisions are possible, but unlikely.
+        final int hashId = uri.hashCode() + width + height * 10000;
+
+        String key = mKeyCache.get(hashId);
+        if (key == null) {
+            key = uri.buildUpon().appendQueryParameter("width", String.valueOf(width))
+                    .appendQueryParameter("height", String.valueOf(height)).build().toString();
+            mKeyCache.put(hashId, key);
+        }
+        return key;
     }
 
     @Override
@@ -480,6 +491,8 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         final boolean success = super.clear();
 
         mMemCache.evictAll();
+
+        mKeyCache.clear();
 
         return success;
     }
