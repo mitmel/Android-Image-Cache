@@ -19,7 +19,6 @@ package edu.mit.mobile.android.imagecache;
  */
 import java.io.IOException;
 import java.lang.ref.SoftReference;
-import java.util.HashMap;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
@@ -52,7 +51,7 @@ import com.commonsware.cwac.adapter.AdapterWrapper;
 public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnImageLoadListener {
     private static final String TAG = ImageLoaderAdapter.class.getSimpleName();
 
-    private final HashMap<Long, SoftReference<ImageView>> mImageViewsToLoad = new HashMap<Long, SoftReference<ImageView>>();
+    private final SparseArray<SoftReference<ImageView>> mImageViewsToLoad = new SparseArray<SoftReference<ImageView>>();
 
     private final int[] mImageViewIDs;
     private final ImageCache mCache;
@@ -187,7 +186,7 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
             if (convertView != null) {
                 final ImageView iv = (ImageView) convertView.findViewById(id);
                 if (iv != null) {
-                    final Long tagId = (Long) iv.getTag(R.id.ic__load_id);
+                    final Integer tagId = (Integer) iv.getTag(R.id.ic__load_id);
                     if (tagId != null) {
                         mCache.cancel(tagId);
                     }
@@ -220,7 +219,7 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
                 return v;
             }
 
-            final long imageID = mCache.getNewID();
+            final int imageID = mCache.getNewID();
             iv.setTag(R.id.ic__load_id, imageID);
             // attempt to bypass all the loading machinery to get the image loaded as quickly
             // as possible
@@ -248,7 +247,7 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
     }
 
     @Override
-    public void onImageLoaded(long id, Uri imageUri, Drawable image) {
+    public void onImageLoaded(int id, Uri imageUri, Drawable image) {
         final SoftReference<ImageView> ivRef = mImageViewsToLoad.get(id);
         if (ivRef == null) {
             return;
@@ -270,5 +269,11 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
     private static class ViewDimensionCache {
         int width;
         int height;
+    }
+
+    @Override
+    @Deprecated
+    public void onImageLoaded(long id, Uri imageUri, Drawable image) {
+        // XXX
     }
 }

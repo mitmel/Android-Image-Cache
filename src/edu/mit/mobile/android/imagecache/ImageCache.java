@@ -50,6 +50,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.HttpParams;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
@@ -100,7 +101,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
     private DrawableMemCache<String> mMemCache = new DrawableMemCache<String>(DEFAULT_CACHE_SIZE);
 
-    private Long mIDCounter = (long) 0;
+    private Integer mIDCounter = 0;
 
     private static ImageCache mInstance;
 
@@ -109,8 +110,11 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     private final ThreadPoolExecutor mExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE,
             MAXIMUM_POOL_SIZE, KEEP_ALIVE_TIME, TimeUnit.SECONDS,
             new PriorityBlockingQueue<Runnable>());
-    private final Map<Long, Runnable> jobs = Collections
-            .synchronizedMap(new HashMap<Long, Runnable>());
+
+    // ignored as SparseArray isn't thread-safe
+    @SuppressLint("UseSparseArrays")
+    private final Map<Integer, Runnable> jobs = Collections
+            .synchronizedMap(new HashMap<Integer, Runnable>());
 
     private final HttpClient hc;
 
@@ -229,7 +233,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      *
      * @return a new unique ID
      */
-    public long getNewID() {
+    public int getNewID() {
         synchronized (mIDCounter) {
             return mIDCounter++;
         }
@@ -313,8 +317,8 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     /**
      * <p>
      * Registers an {@link OnImageLoadListener} with the cache. When an image is loaded
-     * asynchronously either directly by way of {@link #scheduleLoadImage(long, Uri, int, int)} or
-     * indirectly by {@link #loadImage(long, Uri, int, int)}, any registered listeners will get
+     * asynchronously either directly by way of {@link #scheduleLoadImage(int, Uri, int, int)} or
+     * indirectly by {@link #loadImage(int, Uri, int, int)}, any registered listeners will get
      * called.
      * </p>
      *
@@ -344,14 +348,14 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     }
 
     private class LoadResult {
-        public LoadResult(long id, Uri image, Drawable drawable) {
+        public LoadResult(int id, Uri image, Drawable drawable) {
             this.id = id;
             this.drawable = drawable;
             this.image = image;
         }
 
         final Uri image;
-        final long id;
+        final int id;
         final Drawable drawable;
     }
 
@@ -397,7 +401,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     /**
      * A blocking call to get an image. If it's in the cache, it'll return the drawable immediately.
      * Otherwise it will download, scale, and cache the image before returning it. For non-blocking
-     * use, see {@link #loadImage(long, Uri, int, int)}
+     * use, see {@link #loadImage(int, Uri, int, int)}
      *
      * @param uri
      * @param width
@@ -507,13 +511,13 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     }
 
     private class ImageLoadTask implements Runnable, Comparable<ImageLoadTask> {
-        private final long id;
+        private final int id;
         private final Uri uri;
         private final int width;
         private final int height;
         private final long when = System.nanoTime();
 
-        public ImageLoadTask(long id, Uri image, int width, int height) {
+        public ImageLoadTask(int id, Uri image, int width, int height) {
             this.id = id;
             this.uri = image;
             this.width = width;
@@ -582,7 +586,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      * @return the cached bitmap if it's available immediately or null if it needs to be loaded
      *         asynchronously.
      */
-    public Drawable loadImage(long id, Uri image, int width, int height) throws IOException {
+    public Drawable loadImage(int id, Uri image, int width, int height) throws IOException {
         if (DEBUG) {
             Log.d(TAG, "loadImage(" + id + ", " + image + ", " + width + ", " + height + ")");
         }
@@ -595,6 +599,21 @@ public class ImageCache extends DiskCache<String, Bitmap> {
             scheduleLoadImage(id, image, width, height);
         }
         return res;
+    }
+
+    /**
+     * Deprecated to make IDs ints instead of longs. See {@link #loadImage(int, Uri, int, int)}.
+     *
+     * @param id
+     * @param image
+     * @param width
+     * @param height
+     * @return
+     * @throws IOException
+     */
+    @Deprecated
+    public Drawable loadImage(long id, Uri image, int width, int height) throws IOException {
+        return loadImage(id, image, width, height);
     }
 
     /**
@@ -613,7 +632,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      * @param height
      *            the maximum height of the resulting image
      */
-    public void scheduleLoadImage(long id, Uri image, int width, int height) {
+    public void scheduleLoadImage(int id, Uri image, int width, int height) {
         if (DEBUG) {
             Log.d(TAG, "executing new ImageLoadTask in background...");
         }
@@ -621,6 +640,19 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
         jobs.put(id, imt);
         mExecutor.execute(imt);
+    }
+
+    /**
+     * Deprecated in favour of {@link #scheduleLoadImage(int, Uri, int, int)}.
+     *
+     * @param id
+     * @param image
+     * @param width
+     * @param height
+     */
+    @Deprecated
+    public void scheduleLoadImage(long id, Uri image, int width, int height) {
+        scheduleLoadImage(id, image, width, height);
     }
 
     /**
@@ -632,7 +664,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
         mExecutor.getQueue().clear();
     }
 
-    public void cancel(long id) {
+    public void cancel(int id) {
         synchronized (jobs) {
             final Runnable job = jobs.get(id);
             if (job != null) {
@@ -643,6 +675,16 @@ public class ImageCache extends DiskCache<String, Bitmap> {
                 }
             }
         }
+    }
+
+    /**
+     * Deprecated in favour of {@link #cancel(int)}.
+     * 
+     * @param id
+     */
+    @Deprecated
+    public void cancel(long id) {
+        cancel(id);
     }
 
     /**
@@ -764,6 +806,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     private void notifyListeners(LoadResult result) {
         for (final OnImageLoadListener listener : mImageLoadListeners) {
             listener.onImageLoaded(result.id, result.image, result.drawable);
+            listener.onImageLoaded((long) result.id, result.image, result.drawable);
         }
     }
 
@@ -780,13 +823,27 @@ public class ImageCache extends DiskCache<String, Bitmap> {
          * Called when the image has been loaded and scaled.
          *
          * @param id
-         *            the ID provided by {@link ImageCache#loadImage(long, Uri, int, int)} or
-         *            {@link ImageCache#scheduleLoadImage(long, Uri, int, int)}
+         *            the ID provided by {@link ImageCache#loadImage(int, Uri, int, int)} or
+         *            {@link ImageCache#scheduleLoadImage(int, Uri, int, int)}
          * @param imageUri
          *            the uri of the image that was originally requested
          * @param image
          *            the loaded and scaled image
          */
+        public void onImageLoaded(int id, Uri imageUri, Drawable image);
+
+        /**
+         * Deprecated to change id from {@code long} to {@code int} in order to integrate better
+         * into Android. This will still be called as long as you read this message, however it will
+         * go away soon. Please change your signature to {@link #onImageLoaded(int, Uri, Drawable)}.
+         * This can be a no-op: both callbacks will be called.
+         *
+         * @param id
+         * @param imageUri
+         * @param image
+         * @see #onImageLoaded(int, Uri, Drawable)
+         */
+        @Deprecated
         public void onImageLoaded(long id, Uri imageUri, Drawable image);
     }
 }
