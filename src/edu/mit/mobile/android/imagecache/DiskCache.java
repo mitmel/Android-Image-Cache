@@ -1,7 +1,7 @@
 package edu.mit.mobile.android.imagecache;
 
 /*
- * Copyright (C) 2011 MIT Mobile Experience Lab
+ * Copyright (C) 2011-2013 MIT Mobile Experience Lab
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,6 +28,10 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 import android.util.Log;
 
@@ -49,6 +53,8 @@ public abstract class DiskCache<K, V> {
 
     private final File mCacheBase;
     private final String mCachePrefix, mCacheSuffix;
+
+    private long mCacheSize;
 
     /**
      * Creates a new disk cache with no cachePrefix or cacheSuffix
@@ -86,6 +92,13 @@ public abstract class DiskCache<K, V> {
                 throw re;
             }
         }
+    }
+
+    /**
+     * @param maxSize maximum size of the cache, in bytes.
+     */
+    public void setCacheMaxSize(long maxSize) {
+        mCacheSize = maxSize;
     }
 
     /**
@@ -242,10 +255,30 @@ public abstract class DiskCache<K, V> {
     }
 
     /**
-     * @return the size of the cache as it is on disk.
+     * @return the number of files in the cache
+     * @deprecated please use {@link #getCacheEntryCount()} or {@link #getCacheDiskUsage()} instead.
      */
+    @Deprecated
     public int getCacheSize() {
+        return getCacheEntryCount();
+    }
+
+    /**
+     * @return the number of files in the cache as it is on disk.
+     */
+    public int getCacheEntryCount() {
         return mCacheBase.listFiles(mCacheFileFilter).length;
+    }
+
+    /**
+     * @return the size of the cache in bytes, as it is on disk.
+     */
+    public synchronized long getCacheDiskUsage() {
+        long usage = 0;
+        for (final File cacheFile : mCacheBase.listFiles(mCacheFileFilter)) {
+            usage += cacheFile.length();
+        }
+        return usage;
     }
 
     private final CacheFileFilter mCacheFileFilter = new CacheFileFilter();
@@ -258,6 +291,68 @@ public abstract class DiskCache<K, V> {
                     && (mCacheSuffix != null ? path.endsWith(mCacheSuffix) : true);
         }
     };
+
+    final Comparator<File> mLastModifiedOldestFirstComparator = new Comparator<File>() {
+
+        @Override
+        public int compare(File lhs, File rhs) {
+            return Long.valueOf(lhs.lastModified()).compareTo(rhs.lastModified());
+        }
+    };
+
+
+    /**
+     * Clears out cache entries in order to reduce the on-disk size to the desired max size. This is
+     * a somewhat expensive operation, so it should be done on a background thread.
+     *
+     * @return the number of bytes worth of files that were trimmed.
+     */
+    public synchronized long trim() {
+
+        long desiredSize;
+        if (mCacheSize > 0) {
+            desiredSize = mCacheSize;
+        } else {
+            desiredSize = mCacheBase.getUsableSpace() / 10; // 1/10th of the free space.
+        }
+
+        final long sizeToTrim = Math.max(0, getCacheDiskUsage() - desiredSize);
+
+        if (sizeToTrim == 0) {
+            return 0;
+        }
+
+        long trimmed = 0;
+
+        final List<File> sorted = Arrays.asList(mCacheBase.listFiles(mCacheFileFilter));
+        Collections.sort(sorted, mLastModifiedOldestFirstComparator);
+
+        long size;
+        for (final File cacheFile : sorted) {
+            size = cacheFile.length();
+
+            if (cacheFile.delete()) {
+                trimmed += size;
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "trimmed " + cacheFile.getName() + " from cache.");
+                }
+            } else {
+                Log.e(TAG, "error deleting " + cacheFile);
+            }
+            if (trimmed >= sizeToTrim) {
+                break;
+            }
+        }
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "trimmed a total of " + trimmed + " bytes from cache.");
+        }
+        return trimmed;
+    }
+
+    protected boolean touch(K key) {
+        final File f = getFile(key);
+        return f.setLastModified(System.currentTimeMillis());
+    }
 
     /**
      * Implement this to do the actual disk writing. Do not close the OutputStream; it will be

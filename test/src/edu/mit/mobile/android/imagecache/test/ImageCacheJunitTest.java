@@ -1,6 +1,7 @@
 package edu.mit.mobile.android.imagecache.test;
+
 /*
- * Copyright (C) 2011  MIT Mobile Experience Lab
+ * Copyright (C) 2011-2013  MIT Mobile Experience Lab
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -30,6 +31,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.test.InstrumentationTestCase;
+import android.test.suitebuilder.annotation.LargeTest;
 import edu.mit.mobile.android.imagecache.ImageCache;
 import edu.mit.mobile.android.imagecache.ImageCacheException;
 
@@ -46,13 +48,13 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
         imc = ImageCache.getInstance(getInstrumentation().getTargetContext());
     }
 
-    public void testPreconditions(){
+    public void testPreconditions() {
         assertNotNull(imc);
     }
 
-    public void testClear(){
+    public void testClear() {
         assertTrue(imc.clear());
-        assertEquals(0, imc.getCacheSize());
+        assertEquals(0, imc.getCacheEntryCount());
     }
 
     public void testGetPut() throws IOException {
@@ -68,7 +70,7 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
 
         imc.put(key01, bmp);
 
-        assertEquals(1, imc.getCacheSize());
+        assertEquals(1, imc.getCacheEntryCount());
 
         Bitmap bmpResult = imc.get(key01);
         assertNotNull(bmpResult);
@@ -79,14 +81,15 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
         // check contents to ensure it's the same
         // TODO
 
-        bmp = BitmapFactory.decodeResource(contextInst.getResources(), android.R.drawable.ic_dialog_alert);
+        bmp = BitmapFactory.decodeResource(contextInst.getResources(),
+                android.R.drawable.ic_dialog_alert);
 
         assertTrue(bmp.getHeight() > 0);
         assertTrue(bmp.getWidth() > 0);
 
         // call it again, ensure we overwrite
         imc.put(key01, bmp);
-        assertEquals(1, imc.getCacheSize());
+        assertEquals(1, imc.getCacheEntryCount());
 
         bmpResult = imc.get(key01);
         assertNotNull(bmpResult);
@@ -100,27 +103,32 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
         testClear();
     }
 
-    private void assertBitmapMaxSize(int maxExpectedWidth, int maxExpectedHeight, Drawable actual){
+    private void assertBitmapMaxSize(int maxExpectedWidth, int maxExpectedHeight, Drawable actual) {
         assertTrue(maxExpectedWidth >= actual.getIntrinsicWidth());
         assertTrue(maxExpectedHeight >= actual.getIntrinsicHeight());
 
     }
 
-    private void assertBitmapMinSize(int minExpectedWidth, int minExpectedHeight, Drawable actual){
+    private void assertBitmapMinSize(int minExpectedWidth, int minExpectedHeight, Drawable actual) {
         assertTrue(minExpectedWidth <= actual.getIntrinsicWidth());
         assertTrue(minExpectedHeight <= actual.getIntrinsicHeight());
 
     }
 
-    private void assertBitmapEqual(Bitmap expected, Bitmap actual){
+    private void assertBitmapEqual(Bitmap expected, Bitmap actual) {
         assertEquals(expected.getHeight(), actual.getHeight());
         assertEquals(expected.getWidth(), actual.getWidth());
     }
 
     static final int LOCAL_SCALE_SIZE = 100;
 
-    public void testLocalFileLoad() throws IOException, ImageCacheException {
-        testClear();
+    /**
+     * Loads a file from the assets and saves it to a public location.
+     *
+     * @return
+     * @throws IOException
+     */
+    private Uri loadLocalFile() throws IOException {
 
         final String testfile = "logo_locast.png";
         final Context contextInst = getInstrumentation().getContext();
@@ -133,10 +141,10 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
 
         assertNotNull(fos);
 
-        int read=0;
+        int read = 0;
         final byte[] bytes = new byte[1024];
 
-        while((read = is.read(bytes))!= -1){
+        while ((read = is.read(bytes)) != -1) {
             fos.write(bytes, 0, read);
         }
 
@@ -148,6 +156,13 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
         final Uri fileUri = Uri.fromFile(outFile);
 
         assertNotNull(fileUri);
+        return fileUri;
+    }
+
+    public void testLocalFileLoad() throws IOException, ImageCacheException {
+        testClear();
+
+        final Uri fileUri = loadLocalFile();
 
         final Drawable img = imc.getImage(fileUri, LOCAL_SCALE_SIZE, LOCAL_SCALE_SIZE);
 
@@ -155,16 +170,62 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
 
         // the thumbnails produced by this aren't precisely the size we request, due to efficiencies
         // in decoding the image.
-        assertBitmapMaxSize(LOCAL_SCALE_SIZE*2, LOCAL_SCALE_SIZE*2, img);
+        assertBitmapMaxSize(LOCAL_SCALE_SIZE * 2, LOCAL_SCALE_SIZE * 2, img);
 
-        assertBitmapMinSize(LOCAL_SCALE_SIZE/2, LOCAL_SCALE_SIZE/2, img);
+        assertBitmapMinSize(LOCAL_SCALE_SIZE / 2, LOCAL_SCALE_SIZE / 2, img);
+
+    }
+
+    @LargeTest
+    public void testTrim() throws IOException, ImageCacheException {
+        testClear();
+
+        final Uri localFile = loadLocalFile();
+
+        final int maxSize = 150;
+        final int minSize = 50;
+        final int entryCount = maxSize - minSize + 1 /* includes max size */;
+
+        for (int i = minSize; i <= maxSize; i++) {
+            final Drawable img = imc.getImage(localFile, i, i);
+
+            assertNotNull(img);
+        }
+
+        assertEquals(entryCount, imc.getCacheEntryCount());
+
+        final long diskUsage = imc.getCacheDiskUsage();
+
+        assertTrue("Disk usage isn't reasonable", diskUsage > 1000 && diskUsage < 10 * 1024 * 1024);
+
+        // actual disk usage should be around 479100
+
+        final long cacheSize = 300 * 1024 /* kilo */;
+        imc.setCacheMaxSize(cacheSize);
+
+        final long trimmed = imc.trim();
+
+        assertTrue("no bytes were trimmed", trimmed > 0);
+
+        assertTrue("disk usage hasn't changed", diskUsage != imc.getCacheDiskUsage());
+
+        assertTrue("disk usage is larger than desired max size",
+                imc.getCacheDiskUsage() < cacheSize);
+
+        assertTrue("entry count wasn't reduced", imc.getCacheEntryCount() < entryCount);
+
+        // this should have the earliest creation date, so it should be trimmed first
+        assertFalse("first entry wasn't trimmed",
+                imc.contains(imc.getKey(localFile, minSize, minSize)));
+
+        // this has the most recent creation date, so it should be trimmed last
+        assertTrue("last entry was trimmed", imc.contains(imc.getKey(localFile, maxSize, maxSize)));
 
     }
 
     private final int NET_SCALE_SIZE = 100;
 
-    private void testNetworkLoad(Uri uri) throws IOException, ImageCacheException{
-
+    private void testNetworkLoad(Uri uri) throws IOException, ImageCacheException {
 
         // ensure we don't have it in the cache
         final String origKey = imc.getKey(uri);
@@ -177,9 +238,9 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
 
         assertNotNull(img);
 
-        assertBitmapMaxSize(NET_SCALE_SIZE*2, NET_SCALE_SIZE*2, img);
+        assertBitmapMaxSize(NET_SCALE_SIZE * 2, NET_SCALE_SIZE * 2, img);
 
-        assertBitmapMinSize(NET_SCALE_SIZE/2, NET_SCALE_SIZE/2, img);
+        assertBitmapMinSize(NET_SCALE_SIZE / 2, NET_SCALE_SIZE / 2, img);
 
         // ensure that it's stored in the disk cache
         assertNotNull(imc.get(origKey));
@@ -193,7 +254,8 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
         testNetworkLoad(Uri.parse("http://mobile-server.mit.edu/~stevep/logo_start_locast1.png"));
     }
 
-    public void testNetworkLoadLarge() throws ClientProtocolException, IOException, ImageCacheException {
+    public void testNetworkLoadLarge() throws ClientProtocolException, IOException,
+            ImageCacheException {
         testClear();
 
         testNetworkLoad(Uri.parse("http://mobile-server.mit.edu/~stevep/large_logo.png"));
