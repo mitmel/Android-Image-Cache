@@ -28,10 +28,7 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import android.util.Log;
 
@@ -53,6 +50,8 @@ public abstract class DiskCache<K, V> {
 
     private final File mCacheBase;
     private final String mCachePrefix, mCacheSuffix;
+
+    private final ConcurrentLinkedQueue<K> mQueue = new ConcurrentLinkedQueue<K>();
 
     private long mCacheSize;
 
@@ -95,7 +94,10 @@ public abstract class DiskCache<K, V> {
     }
 
     /**
-     * @param maxSize maximum size of the cache, in bytes.
+     * Sets the maximum size of the cache, in bytes.
+     *
+     * @param maxSize
+     *            maximum size of the cache, in bytes.
      */
     public void setCacheMaxSize(long maxSize) {
         mCacheSize = maxSize;
@@ -127,6 +129,8 @@ public abstract class DiskCache<K, V> {
         final OutputStream os = new FileOutputStream(saveHere);
         toDisk(key, value, os);
         os.close();
+
+        touchKey(key);
     }
 
     /**
@@ -165,7 +169,22 @@ public abstract class DiskCache<K, V> {
                 tempFile.delete();
             }
         }
+        touchKey(key);
     }
+
+    /**
+     * Puts the key at the end of the queue, removing it if it's already present. This will cause it
+     * to be removed last when {@link #trim()} is called.
+     *
+     * @param key
+     */
+    private synchronized void touchKey(K key) {
+        if (mQueue.contains(key)) {
+            mQueue.remove(key);
+        }
+        mQueue.add(key);
+    }
+
 
     /**
      * Reads from an inputstream, dumps to an outputstream
@@ -201,6 +220,9 @@ public abstract class DiskCache<K, V> {
         final InputStream is = new FileInputStream(readFrom);
         final V out = fromDisk(key, is);
         is.close();
+
+        touchKey(key);
+
         return out;
     }
 
@@ -292,20 +314,12 @@ public abstract class DiskCache<K, V> {
         }
     };
 
-    final Comparator<File> mLastModifiedOldestFirstComparator = new Comparator<File>() {
-
-        @Override
-        public int compare(File lhs, File rhs) {
-            return Long.valueOf(lhs.lastModified()).compareTo(rhs.lastModified());
-        }
-    };
-
-
     /**
      * Clears out cache entries in order to reduce the on-disk size to the desired max size. This is
      * a somewhat expensive operation, so it should be done on a background thread.
      *
      * @return the number of bytes worth of files that were trimmed.
+     * @see #setCacheMaxSize(long)
      */
     public synchronized long trim() {
 
@@ -324,12 +338,17 @@ public abstract class DiskCache<K, V> {
 
         long trimmed = 0;
 
-        final List<File> sorted = Arrays.asList(mCacheBase.listFiles(mCacheFileFilter));
-        Collections.sort(sorted, mLastModifiedOldestFirstComparator);
+        while (trimmed < sizeToTrim && !mQueue.isEmpty()) {
+            final K key = mQueue.poll();
 
-        long size;
-        for (final File cacheFile : sorted) {
-            size = cacheFile.length();
+            // shouldn't happen due to the check above, but just in case...
+            if (key == null) {
+                break;
+            }
+
+            final File cacheFile = getFile(key);
+
+            final long size = cacheFile.length();
 
             if (cacheFile.delete()) {
                 trimmed += size;
@@ -339,19 +358,12 @@ public abstract class DiskCache<K, V> {
             } else {
                 Log.e(TAG, "error deleting " + cacheFile);
             }
-            if (trimmed >= sizeToTrim) {
-                break;
-            }
         }
+
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "trimmed a total of " + trimmed + " bytes from cache.");
         }
         return trimmed;
-    }
-
-    protected boolean touch(K key) {
-        final File f = getFile(key);
-        return f.setLastModified(System.currentTimeMillis());
     }
 
     /**

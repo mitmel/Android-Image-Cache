@@ -194,6 +194,9 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
 
         assertEquals(entryCount, imc.getCacheEntryCount());
 
+        // cause a cache hit on the first item.
+        imc.get(imc.getKey(localFile, minSize, minSize));
+
         final long diskUsage = imc.getCacheDiskUsage();
 
         assertTrue("Disk usage isn't reasonable", diskUsage > 1000 && diskUsage < 10 * 1024 * 1024);
@@ -214,12 +217,13 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
 
         assertTrue("entry count wasn't reduced", imc.getCacheEntryCount() < entryCount);
 
-        // this should have the earliest creation date, so it should be trimmed first
-        assertFalse("first entry wasn't trimmed",
-                imc.contains(imc.getKey(localFile, minSize, minSize)));
+        // this should have the earliest access time, so it should be trimmed first
+        assertFalse("second entry wasn't trimmed",
+                imc.contains(imc.getKey(localFile, minSize + 1, minSize + 1)));
 
         // this has the most recent creation date, so it should be trimmed last
         assertTrue("last entry was trimmed", imc.contains(imc.getKey(localFile, maxSize, maxSize)));
+
 
     }
 
