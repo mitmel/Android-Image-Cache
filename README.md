@@ -2,7 +2,7 @@ Image Cache
 ===========
 
 An image download-and-cacher that also knows how to efficiently generate
-and retrieve thumbnails of various sizes. 
+and retrieve thumbnails of various sizes.
 
 Features
 --------
@@ -12,6 +12,8 @@ Features
 * automatic generation and caching of multiple sizes of images based on one
   downloaded asset
 * provides a disk cache as well as a memory cache
+* automatic disk cache management; no setup necessary, but parameters can be
+  fine-tuned if desired
 * designed to work with your existing setup: no extending a custom application
   or activity needed
 * cursor adapter supports multiple image fields for each ImageView; skips
@@ -21,8 +23,8 @@ Features
 Using
 -----
 
-Please see the test/ directory for both a simple example of using it as well as
-some unit tests. When running the application in test/ make sure to run it as
+Please see the `test/` directory for both a simple example of using it as well as
+some unit tests. When running the application in `test/` make sure to run it as
 an Android activity if you want to see the demo.
 
 Both the unit tests and the interactive test load some images from our lab's servers.
@@ -31,7 +33,7 @@ License
 =======
 
 MEL Android Image Cache  
-Copyright (C) 2011-2012 [MIT Mobile Experience Lab][mel]
+Copyright (C) 2011-2013 [MIT Mobile Experience Lab][mel]
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
