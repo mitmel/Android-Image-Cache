@@ -381,6 +381,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
             if (DEBUG) {
                 Log.d(TAG, "mem cache hit for key " + key);
             }
+            touchKey(key);
             return img;
         }
 
@@ -679,7 +680,7 @@ public class ImageCache extends DiskCache<String, Bitmap> {
 
     /**
      * Deprecated in favour of {@link #cancel(int)}.
-     * 
+     *
      * @param id
      */
     @Deprecated

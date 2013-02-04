@@ -28,12 +28,35 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+import android.os.Build;
+import android.os.StatFs;
 import android.util.Log;
 
 /**
+ * <p>
  * A simple disk cache.
+ * </p>
+ *
+ * <p>
+ * By default, the maximum size of the cache is automatically set based on the amount of free space
+ * available to the cache. Alternatively, a fixed size can be specified using
+ * {@link #setCacheMaxSize(long)}.
+ * </p>
+ *
+ * <p>
+ * By default, the cache will automatically maintain its size by periodically checking to see if it
+ * estimates that a trim is needed and if it is, proceeding to running {@link #trim()} on a worker
+ * thread. This feature can be controlled by {@link #setAutoTrimFrequency(int)}.
+ * </p>
  *
  * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
  *
@@ -42,18 +65,52 @@ import android.util.Log;
  * @param <V>
  *            the value that will be stored to disk
  */
-// TODO add automatic cache cleanup so low disk conditions can be met
 public abstract class DiskCache<K, V> {
     private static final String TAG = "DiskCache";
+
+    /**
+     * Automatically determines the maximum size of the cache based on available free space.
+     */
+    public static final int AUTO_MAX_CACHE_SIZE = 0;
+
+    /**
+     * The default number of cache hits before {@link #trim()} is automatically triggered. See
+     * {@link #setAutoTrimFrequency(int)}.
+     */
+    public static final int DEFAULT_AUTO_TRIM_FREQUENCY = 10;
+
+    /**
+     * Pass to {@link #setAutoTrimFrequency(int)} to disable automatic trimming. See {@link #trim()}
+     * .
+     */
+    public static final int AUTO_TRIM_DISABLED = 0;
+
+    // /////////////////////////////////////////////
+
+    private long mMaxDiskUsage = AUTO_MAX_CACHE_SIZE;
 
     private MessageDigest hash;
 
     private final File mCacheBase;
     private final String mCachePrefix, mCacheSuffix;
 
-    private final ConcurrentLinkedQueue<K> mQueue = new ConcurrentLinkedQueue<K>();
+    private final ConcurrentLinkedQueue<File> mQueue = new ConcurrentLinkedQueue<File>();
 
-    private long mCacheSize;
+    /**
+     * In auto max cache mode, the maximum is set to the total free space divided by this amount.
+     */
+    private static final int AUTO_MAX_CACHE_SIZE_DIVISOR = 10;
+
+    private int mAutoTrimFrequency = DEFAULT_AUTO_TRIM_FREQUENCY;
+
+    private final ThreadPoolExecutor mExecutor = new ThreadPoolExecutor(1, 5, 60, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<Runnable>());
+
+    private int mAutoTrimHitCount = 1;
+
+    private long mEstimatedDiskUsage;
+
+    private long mEstimatedFreeSpace;
 
     /**
      * Creates a new disk cache with no cachePrefix or cacheSuffix
@@ -91,16 +148,71 @@ public abstract class DiskCache<K, V> {
                 throw re;
             }
         }
+
+        updateDiskUsageInBg();
     }
 
     /**
-     * Sets the maximum size of the cache, in bytes.
+     * Sets the maximum size of the cache, in bytes. The default is to automatically manage the max
+     * size based on the available disk space. This can be explicitly set by passing this
+     * {@link #AUTO_MAX_CACHE_SIZE}.
      *
      * @param maxSize
      *            maximum size of the cache, in bytes.
      */
     public void setCacheMaxSize(long maxSize) {
-        mCacheSize = maxSize;
+        mMaxDiskUsage = maxSize;
+    }
+
+    /**
+     * After this many puts, if it looks like there's a low space condition, {@link #trim()} will
+     * automatically be called.
+     *
+     * @param autoTrimFrequency
+     *            Set to {@link #AUTO_TRIM_DISABLED} to turn off auto trim. The default is
+     *            {@link #DEFAULT_AUTO_TRIM_FREQUENCY}.
+     */
+    public void setAutoTrimFrequency(int autoTrimFrequency) {
+        mAutoTrimFrequency = autoTrimFrequency;
+    }
+
+    /**
+     * Updates cached estimates on the
+     */
+    private void updateDiskUsageEstimates() {
+        final long diskUsage = getCacheDiskUsage();
+
+        final long availableSpace = getFreeSpace();
+
+        synchronized (this) {
+            mEstimatedDiskUsage = diskUsage;
+            mEstimatedFreeSpace = availableSpace;
+        }
+    }
+
+    private void updateDiskUsageInBg() {
+        mExecutor.execute(new Runnable() {
+
+            @Override
+            public void run() {
+                updateDiskUsageEstimates();
+            }
+        });
+    }
+
+    /**
+     * Gets the amount of space free on the cache volume.
+     *
+     * @return free space in bytes.
+     */
+    private long getFreeSpace() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+            return mCacheBase.getUsableSpace();
+        } else {
+            // maybe make singleton
+            final StatFs stat = new StatFs(mCacheBase.getAbsolutePath());
+            return (long) stat.getAvailableBlocks() * (long) stat.getBlockSize();
+        }
     }
 
     /**
@@ -130,7 +242,11 @@ public abstract class DiskCache<K, V> {
         toDisk(key, value, os);
         os.close();
 
-        touchKey(key);
+        mEstimatedDiskUsage += saveHere.length();
+
+        touchEntry(saveHere);
+
+        autotrim();
     }
 
     /**
@@ -169,22 +285,62 @@ public abstract class DiskCache<K, V> {
                 tempFile.delete();
             }
         }
-        touchKey(key);
+        if (allGood) {
+            mEstimatedDiskUsage += saveHere.length();
+
+            touchEntry(saveHere);
+
+            autotrim();
+        }
     }
 
     /**
      * Puts the key at the end of the queue, removing it if it's already present. This will cause it
      * to be removed last when {@link #trim()} is called.
      *
-     * @param key
+     * @param cacheFile
      */
-    private synchronized void touchKey(K key) {
-        if (mQueue.contains(key)) {
-            mQueue.remove(key);
+    private void touchEntry(File cacheFile) {
+        if (mQueue.contains(cacheFile)) {
+            mQueue.remove(cacheFile);
         }
-        mQueue.add(key);
+        mQueue.add(cacheFile);
     }
 
+    /**
+     * Marks the given key as accessed recently. This will deprioritize it from automatically being
+     * purged upon {@link #trim()}.
+     *
+     * @param key
+     */
+    protected void touchKey(K key) {
+        touchEntry(getFile(key));
+    }
+
+    /**
+     * Call this every time you may be able to start a trim in the background. This implicitly runs
+     * {@link #updateDiskUsageInBg()} each time it's called.
+     */
+    private void autotrim() {
+        if (mAutoTrimFrequency == 0) {
+            return;
+        }
+
+        mAutoTrimHitCount = (mAutoTrimHitCount + 1) % mAutoTrimFrequency;
+
+        if (mAutoTrimHitCount == 0
+                && mEstimatedDiskUsage > Math.min(mEstimatedFreeSpace, mMaxDiskUsage)) {
+
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    trim();
+                }
+            });
+        }
+
+        updateDiskUsageInBg();
+    }
 
     /**
      * Reads from an inputstream, dumps to an outputstream
@@ -221,7 +377,7 @@ public abstract class DiskCache<K, V> {
         final V out = fromDisk(key, is);
         is.close();
 
-        touchKey(key);
+        touchEntry(readFrom);
 
         return out;
     }
@@ -251,8 +407,38 @@ public abstract class DiskCache<K, V> {
         if (!readFrom.exists()) {
             return true;
         }
+        final long size = readFrom.length();
 
-        return readFrom.delete();
+        final boolean success = readFrom.delete();
+
+        if (success) {
+            mEstimatedDiskUsage -= size;
+        }
+
+        return success;
+    }
+
+    /**
+     * Removes the item from the disk cache.
+     *
+     * @param cacheFile
+     * @return true if the cached item has been removed or was already removed, false if it was not
+     *         able to be removed.
+     */
+    private synchronized boolean clear(File cacheFile) {
+
+        if (!cacheFile.exists()) {
+            return true;
+        }
+        final long size = cacheFile.length();
+
+        final boolean success = cacheFile.delete();
+
+        if (success) {
+            mEstimatedDiskUsage -= size;
+        }
+
+        return success;
     }
 
     /**
@@ -268,7 +454,6 @@ public abstract class DiskCache<K, V> {
 
         for (final File cacheFile : mCacheBase.listFiles(mCacheFileFilter)) {
             if (!cacheFile.delete()) {
-                // throw new IOException("cannot delete cache file");
                 Log.e(TAG, "error deleting " + cacheFile);
                 success = false;
             }
@@ -295,7 +480,7 @@ public abstract class DiskCache<K, V> {
     /**
      * @return the size of the cache in bytes, as it is on disk.
      */
-    public synchronized long getCacheDiskUsage() {
+    public long getCacheDiskUsage() {
         long usage = 0;
         for (final File cacheFile : mCacheBase.listFiles(mCacheFileFilter)) {
             usage += cacheFile.length();
@@ -314,9 +499,17 @@ public abstract class DiskCache<K, V> {
         }
     };
 
+    private final Comparator<File> mLastModifiedOldestFirstComparator = new Comparator<File>() {
+
+        @Override
+        public int compare(File lhs, File rhs) {
+            return Long.valueOf(lhs.lastModified()).compareTo(rhs.lastModified());
+        }
+    };
+
     /**
-     * Clears out cache entries in order to reduce the on-disk size to the desired max size. This is
-     * a somewhat expensive operation, so it should be done on a background thread.
+     * Clears out cache entries in order to reduce the on-disk usage to the desired maximum size.
+     * This is a somewhat expensive operation, so it should be done on a background thread.
      *
      * @return the number of bytes worth of files that were trimmed.
      * @see #setCacheMaxSize(long)
@@ -324,11 +517,15 @@ public abstract class DiskCache<K, V> {
     public synchronized long trim() {
 
         long desiredSize;
-        if (mCacheSize > 0) {
-            desiredSize = mCacheSize;
+        final long freeSpace = getFreeSpace();
+
+        if (mMaxDiskUsage > 0) {
+            desiredSize = mMaxDiskUsage;
         } else {
-            desiredSize = mCacheBase.getUsableSpace() / 10; // 1/10th of the free space.
+            desiredSize = getFreeSpace() / AUTO_MAX_CACHE_SIZE_DIVISOR;
         }
+
+        desiredSize = Math.min(freeSpace, desiredSize);
 
         final long sizeToTrim = Math.max(0, getCacheDiskUsage() - desiredSize);
 
@@ -338,19 +535,39 @@ public abstract class DiskCache<K, V> {
 
         long trimmed = 0;
 
+        final List<File> sorted = Arrays.asList(mCacheBase.listFiles(mCacheFileFilter));
+        Collections.sort(sorted, mLastModifiedOldestFirstComparator);
+
+        // first clear out any files that aren't in the queue
+        for (final File cacheFile : sorted) {
+            if (mQueue.contains(cacheFile)) {
+                continue;
+            }
+
+            final long size = cacheFile.length();
+            if (clear(cacheFile)) {
+                trimmed += size;
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "trimmed unqueued " + cacheFile.getName() + " from cache.");
+                }
+            }
+
+            if (trimmed >= sizeToTrim) {
+                break;
+            }
+        }
+
         while (trimmed < sizeToTrim && !mQueue.isEmpty()) {
-            final K key = mQueue.poll();
+            final File cacheFile = mQueue.poll();
 
             // shouldn't happen due to the check above, but just in case...
-            if (key == null) {
+            if (cacheFile == null) {
                 break;
             }
 
-            final File cacheFile = getFile(key);
-
             final long size = cacheFile.length();
 
-            if (cacheFile.delete()) {
+            if (clear(cacheFile)) {
                 trimmed += size;
                 if (BuildConfig.DEBUG) {
                     Log.d(TAG, "trimmed " + cacheFile.getName() + " from cache.");
@@ -394,6 +611,8 @@ public abstract class DiskCache<K, V> {
      */
     public String hash(K key) {
         final byte[] ba;
+
+        // MessageDigest isn't threadsafe, so we need to ensure it doesn't tread on itself.
         synchronized (hash) {
             hash.update(key.toString().getBytes());
             ba = hash.digest();
