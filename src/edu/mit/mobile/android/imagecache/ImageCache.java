@@ -48,6 +48,7 @@ import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.params.HttpParams;
 
 import android.annotation.SuppressLint;
@@ -171,7 +172,11 @@ public class ImageCache extends DiskCache<String, Bitmap> {
      */
     public ImageCache(Context context, CompressFormat format, int quality) {
         super(context.getCacheDir(), null, getExtension(format));
-        hc = getHttpClient();
+        if (USE_APACHE_NC) {
+            hc = getHttpClient();
+        } else {
+            hc = null;
+        }
 
         mRes = context.getResources();
 
@@ -286,6 +291,8 @@ public class ImageCache extends DiskCache<String, Bitmap> {
             DefaultHttpClient dhc = new DefaultHttpClient();
             final HttpParams params = dhc.getParams();
             dhc = null;
+
+            params.setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 20 * 1000);
 
             final SchemeRegistry registry = new SchemeRegistry();
             registry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
