@@ -123,7 +123,7 @@ public abstract class DiskCache<K, V> {
      * @param value
      *            the data to be written to disk.
      */
-    public synchronized void put(K key, V value) throws IOException, FileNotFoundException {
+    public final synchronized void put(K key, V value) throws IOException, FileNotFoundException {
         final File saveHere = getFile(key);
 
         final OutputStream os = new FileOutputStream(saveHere);
@@ -143,7 +143,7 @@ public abstract class DiskCache<K, V> {
      * @throws IOException
      * @throws FileNotFoundException
      */
-    public void putRaw(K key, InputStream value) throws IOException, FileNotFoundException {
+    public final void putRaw(K key, InputStream value) throws IOException, FileNotFoundException {
 
         final File saveHere = getFile(key);
 
@@ -210,7 +210,7 @@ public abstract class DiskCache<K, V> {
      * @param key
      * @return The value for key or null if the key doesn't map to any existing entries.
      */
-    public synchronized V get(K key) throws IOException {
+    public final synchronized V get(K key) throws IOException {
         final File readFrom = getFile(key);
 
         if (!readFrom.exists()) {
@@ -232,7 +232,7 @@ public abstract class DiskCache<K, V> {
      * @param key
      * @return true if the disk cache contains the given key
      */
-    public synchronized boolean contains(K key) {
+    public final synchronized boolean contains(K key) {
         final File readFrom = getFile(key);
 
         return readFrom.exists();
