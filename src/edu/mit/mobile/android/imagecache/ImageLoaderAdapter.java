@@ -270,10 +270,4 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
         int width;
         int height;
     }
-
-    @Override
-    @Deprecated
-    public void onImageLoaded(long id, Uri imageUri, Drawable image) {
-        // XXX
-    }
 }

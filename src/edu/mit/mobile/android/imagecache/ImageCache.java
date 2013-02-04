@@ -814,7 +814,6 @@ public class ImageCache extends DiskCache<String, Bitmap> {
     private void notifyListeners(LoadResult result) {
         for (final OnImageLoadListener listener : mImageLoadListeners) {
             listener.onImageLoaded(result.id, result.image, result.drawable);
-            listener.onImageLoaded((long) result.id, result.image, result.drawable);
         }
     }
 
@@ -839,19 +838,5 @@ public class ImageCache extends DiskCache<String, Bitmap> {
          *            the loaded and scaled image
          */
         public void onImageLoaded(int id, Uri imageUri, Drawable image);
-
-        /**
-         * Deprecated to change id from {@code long} to {@code int} in order to integrate better
-         * into Android. This will still be called as long as you read this message, however it will
-         * go away soon. Please change your signature to {@link #onImageLoaded(int, Uri, Drawable)}.
-         * This can be a no-op: both callbacks will be called.
-         *
-         * @param id
-         * @param imageUri
-         * @param image
-         * @see #onImageLoaded(int, Uri, Drawable)
-         */
-        @Deprecated
-        public void onImageLoaded(long id, Uri imageUri, Drawable image);
     }
 }
