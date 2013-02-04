@@ -182,6 +182,8 @@ public class ImageCacheJunitTest extends InstrumentationTestCase {
 
         final Uri localFile = loadLocalFile();
 
+        imc.setAutoTrimFrequency(0);
+
         final int maxSize = 150;
         final int minSize = 50;
         final int entryCount = maxSize - minSize + 1 /* includes max size */;

@@ -7,6 +7,11 @@
         android:showAsAction="ifRoom"
         android:title="Clear Cache"/>
     <item
+        android:id="@+id/trim"
+        android:icon="@android:drawable/ic_menu_delete"
+        android:showAsAction="ifRoom"
+        android:title="Trim Cache"/>
+    <item
         android:id="@+id/grid"
         android:icon="@android:drawable/ic_menu_gallery"
         android:showAsAction="ifRoom"

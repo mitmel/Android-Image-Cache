@@ -7,13 +7,13 @@ import org.apache.http.client.ClientProtocolException;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Bitmap.CompressFormat;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.GridView;
+import android.widget.Toast;
 import edu.mit.mobile.android.imagecache.ImageCache;
 
 public class ConcurrencyTest extends Activity {
@@ -65,15 +65,26 @@ public class ConcurrencyTest extends Activity {
         }
     }
 
+    private void trim() {
+        final long trimmed = mCache.trim();
+        Toast.makeText(this, trimmed + " byte(s) trimmed.", Toast.LENGTH_LONG).show();
+    }
+
+    private void clear() {
+        mCache.clear();
+        Toast.makeText(this, "Cache cleared.", Toast.LENGTH_LONG).show();
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.clear:
-                mCache.clear();
+                clear();
                 return true;
 
-            case R.id.grid:
-                startActivity(new Intent(this, ConcurrencyTest.class));
+            case R.id.trim:
+
+                trim();
                 return true;
 
             default:
@@ -85,6 +96,7 @@ public class ConcurrencyTest extends Activity {
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
         getMenuInflater().inflate(R.menu.main_menu, menu);
+        menu.findItem(R.id.grid).setVisible(false);
         return true;
     }
 

@@ -1,6 +1,7 @@
 package edu.mit.mobile.android.imagecache.test;
+
 /*
- * Copyright (C) 2011  MIT Mobile Experience Lab
+ * Copyright (C) 2011-2013  MIT Mobile Experience Lab
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,6 +23,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Gallery;
+import android.widget.Toast;
 import edu.mit.mobile.android.imagecache.ImageCache;
 
 @SuppressWarnings("deprecation")
@@ -31,7 +33,6 @@ public class InteractiveDemo extends ListActivity {
 
     private final TestData mTestData = new TestData();
 
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -40,6 +41,7 @@ public class InteractiveDemo extends ListActivity {
         final Gallery gallery = (Gallery) findViewById(R.id.gallery);
 
         mCache = ImageCache.getInstance(this);
+        mCache.setCacheMaxSize(1 * 1024 /* mega */* 1024 /* kilo */);
 
         initData();
 
@@ -119,12 +121,27 @@ public class InteractiveDemo extends ListActivity {
 
     }
 
+    private void trim() {
+        final long trimmed = mCache.trim();
+        Toast.makeText(this, trimmed + " byte(s) trimmed.", Toast.LENGTH_LONG).show();
+    }
+
+    private void clear() {
+        mCache.clear();
+        Toast.makeText(this, "Cache cleared.", Toast.LENGTH_LONG).show();
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()){
-        case R.id.clear:
-            mCache.clear();
-            return true;
+        switch (item.getItemId()) {
+            case R.id.clear:
+                clear();
+                return true;
+
+            case R.id.trim:
+
+                trim();
+                return true;
 
             case R.id.grid:
                 startActivity(new Intent(this, ConcurrencyTest.class));
