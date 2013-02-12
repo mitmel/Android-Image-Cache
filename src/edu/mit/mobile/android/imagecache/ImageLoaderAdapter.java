@@ -1,7 +1,7 @@
 package edu.mit.mobile.android.imagecache;
 
 /*
- * Copyright (C) 2011-2012 MIT Mobile Experience Lab
+ * Copyright (C) 2011-2013 MIT Mobile Experience Lab
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,7 @@ package edu.mit.mobile.android.imagecache;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -38,11 +39,11 @@ import com.commonsware.cwac.adapter.AdapterWrapper;
  * </p>
  *
  * <p>
- * To use, pass in a ListAdapter that generates ImageViews in the layout hierarchy of getView().
- * ImageViews are searched for using the IDs specified in imageViewIDs. When found,
- * {@link ImageView#getTag(R.id.ic__load_id)} is called and should return a {@link Uri} referencing
- * a local or remote image. See {@link ImageCache#loadImage(long, Uri, int, int)} for details on the
- * types of URIs and images supported.
+ * To use, pass in a {@link ListAdapter} that generates {@link ImageView}s in the layout hierarchy
+ * of getView(). ImageViews are searched for using the IDs specified in {@code imageViewIDs}. When
+ * found, {@link ImageView#getTag(R.id.ic__uri)} is called and should return a {@link Uri}
+ * referencing a local or remote image. See {@link ImageCache#loadImage(int, Uri, int, int)} for
+ * details on the types of URIs and images supported.
  * </p>
  *
  * @author <a href="mailto:spomeroy@mit.edu">Steve Pomeroy</a>
@@ -50,6 +51,20 @@ import com.commonsware.cwac.adapter.AdapterWrapper;
  */
 public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnImageLoadListener {
     private static final String TAG = ImageLoaderAdapter.class.getSimpleName();
+
+    /**
+     * The unit specified is in pixels
+     */
+    public static final int UNIT_PX = 0;
+
+    /**
+     * The unit specified is in density-independent pixels (DIP)
+     */
+    public static final int UNIT_DIP = 1;
+
+    // //////////////////////////////////////////////
+    // / private
+    // //////////////////////////////////////////////
 
     private final SparseArray<SoftReference<ImageView>> mImageViewsToLoad = new SparseArray<SoftReference<ImageView>>();
 
@@ -62,12 +77,21 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
 
     private final SparseArray<ViewDimensionCache> mViewDimensionCache;
 
-    public static final int UNIT_PX = 0, UNIT_DIP = 1;
+    // ///////////////////////////////////////////////
 
     /**
+     * Like the
+     * {@link #ImageLoaderAdapter(Context, ListAdapter, ImageCache, int[], int, int, int, boolean)}
+     * constructor with a default of {@code true} for autosize.
+     *
      * @param context
+     *            a context for getting the display density. You don't need to worry about this
+     *            class holding on to a reference to this: it's only used in the constructor.
      * @param wrapped
+     *            the adapter that's wrapped. See {@link ImageLoaderAdapter} for the requirements of
+     *            using this adapter wrapper.
      * @param cache
+     *            an instance of your image cache. This can be shared with the process.
      * @param imageViewIDs
      *            a list of resource IDs matching the ImageViews that should be scanned and loaded.
      * @param defaultWidth
@@ -77,7 +101,7 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
      *            the default maximum height, in the specified unit. This size will be used if the
      *            size cannot be obtained from the view.
      * @param unit
-     *            one of UNIT_PX or UNIT_DIP
+     *            one of {@link #UNIT_PX} or {@link #UNIT_DIP}
      */
     public ImageLoaderAdapter(Context context, ListAdapter wrapped, ImageCache cache,
             int[] imageViewIDs, int defaultWidth, int defaultHeight, int unit) {
@@ -92,6 +116,7 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
      *            the adapter that's wrapped. See {@link ImageLoaderAdapter} for the requirements of
      *            using this adapter wrapper.
      * @param cache
+     *            an instance of your image cache. This can be shared with the process.
      * @param imageViewIDs
      *            a list of resource IDs matching the ImageViews that should be scanned and loaded.
      * @param defaultWidth
@@ -101,7 +126,7 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
      *            the default maximum height, in the specified unit. This size will be used if the
      *            size cannot be obtained from the view.
      * @param unit
-     *            one of UNIT_PX or UNIT_DIP
+     *            one of {@link #UNIT_PX} or {@link #UNIT_DIP}
      * @param autosize
      *            if true, the view's dimensions will be cached the first time it's loaded and an
      *            image of the appropriate size will be requested the next time an image is loaded.
@@ -143,8 +168,13 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
     }
 
     /**
+     * Constructs a new adapter with a default unit of pixels.
+     *
      * @param wrapped
+     *            the adapter that's wrapped. See {@link ImageLoaderAdapter} for the requirements of
+     *            using this adapter wrapper.
      * @param cache
+     *            an instance of your image cache. This can be shared with the process.
      * @param imageViewIDs
      *            a list of resource IDs matching the ImageViews that should be scan
      * @param width
@@ -164,14 +194,14 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
     }
 
     /**
-     * This can be called from your onResume() method.
+     * This can be called from your {@link Activity#onResume()} method.
      */
     public void registerOnImageLoadListener() {
         mCache.registerOnImageLoadListener(this);
     }
 
     /**
-     * This can be called from your onPause() method.
+     * This can be called from your {@link Activity#onPause()} method.
      */
     public void unregisterOnImageLoadListener() {
         mCache.unregisterOnImageLoadListener(this);
@@ -180,7 +210,6 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         final View v = super.getView(position, convertView, parent);
-
 
         for (final int id : mImageViewIDs) {
             if (convertView != null) {
