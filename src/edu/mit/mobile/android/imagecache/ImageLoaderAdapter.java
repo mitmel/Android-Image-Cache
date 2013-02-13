@@ -226,6 +226,13 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
             if (iv == null) {
                 continue;
             }
+
+            final Uri tag = (Uri) iv.getTag(R.id.ic__uri);
+            // short circuit if there's no tag
+            if (tag == null) {
+                continue;
+            }
+
             ViewDimensionCache viewDimension = null;
 
             if (mAutosize) {
@@ -242,13 +249,11 @@ public class ImageLoaderAdapter extends AdapterWrapper implements ImageCache.OnI
                 }
             }
 
-            final Uri tag = (Uri) iv.getTag(R.id.ic__uri);
-            // short circuit if there's no tag
-            if (tag == null) {
-                return v;
-            }
-
             final int imageID = mCache.getNewID();
+
+            // ic__load_id is used to keep track of what load ID is associated with what
+            // particular ImageView
+
             iv.setTag(R.id.ic__load_id, imageID);
             // attempt to bypass all the loading machinery to get the image loaded as quickly
             // as possible
